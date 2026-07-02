@@ -44,8 +44,10 @@ describe('package smoke args', () => {
   test('requires a supported platform value', () => {
     expect(() => parsePackageSmokeArgs([])).toThrow('--platform')
     expect(() => parsePackageSmokeArgs(['--platform', 'android'])).toThrow('macos|windows|linux')
+    expect(() => parsePackageSmokeArgs(['--platform', 'windows', '--arch', 'ia32'])).toThrow('x64|arm64')
     expect(() => parsePackageSmokeArgs(['--platform', 'macos', '--package-kind', 'installer'])).toThrow('auto|dir|release')
     expect(parsePackageSmokeArgs(['--platform', 'macos']).platform).toBe('macos')
+    expect(parsePackageSmokeArgs(['--platform', 'windows', '--arch', 'arm64']).arch).toBe('arm64')
     expect(parsePackageSmokeArgs(['--platform', 'macos']).packageKind).toBe('auto')
     expect(parsePackageSmokeArgs(['--platform', 'macos', '--package-kind', 'dir']).packageKind).toBe('dir')
     expect(parsePackageSmokeArgs(['--platform', 'macos', '--require-macos-gatekeeper']).requireMacosGatekeeper).toBe(true)
@@ -301,12 +303,63 @@ describe('packaged artifact inspection', () => {
 
     const report = await inspectPackagedArtifacts(rootDir, {
       platform: 'windows',
+      arch: 'x64',
       packageKind: 'release',
       artifactsDir: 'desktop/build-artifacts/windows-x64',
     })
 
     expect(report.passed).toBe(true)
     expect(report.artifactsDir.endsWith('desktop/build-artifacts/windows-x64')).toBe(true)
+  })
+
+  test('passes Windows arm64 checks only when arm64 sidecar and node-pty native module are present', async () => {
+    const rootDir = createRepoRoot()
+    tempDirs.push(rootDir)
+
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/Claude-Code-Haha-0.3.1-arm64.exe')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/Claude-Code-Haha-0.3.1-arm64.exe.blockmap')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app-update.yml')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/src-tauri/binaries/claude-sidecar-aarch64-pc-windows-msvc.exe')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/package.json')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/prebuilds/win32-arm64/pty.node')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/latest.yml', 'path: Claude-Code-Haha-0.3.1-arm64.exe\n')
+
+    const report = await inspectPackagedArtifacts(rootDir, {
+      platform: 'windows',
+      arch: 'arm64',
+      packageKind: 'release',
+      artifactsDir: 'desktop/build-artifacts/windows-arm64',
+    })
+
+    expect(report.passed).toBe(true)
+    expect(report.passedChecks.some((check) => check.label === 'Windows arm64 unpacked sidecar binary')).toBe(true)
+    expect(report.passedChecks.some((check) => check.label === 'Windows arm64 node-pty native module')).toBe(true)
+  })
+
+  test('fails Windows arm64 checks when the package only contains x64 native files', async () => {
+    const rootDir = createRepoRoot()
+    tempDirs.push(rootDir)
+
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/Claude-Code-Haha-0.3.1-arm64.exe')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/Claude-Code-Haha-0.3.1-arm64.exe.blockmap')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app-update.yml')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/src-tauri/binaries/claude-sidecar-x86_64-pc-windows-msvc.exe')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/package.json')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/prebuilds/win32-x64/pty.node')
+    writeFile(rootDir, 'desktop/build-artifacts/windows-arm64/latest.yml', 'path: Claude-Code-Haha-0.3.1-arm64.exe\n')
+
+    const report = await inspectPackagedArtifacts(rootDir, {
+      platform: 'windows',
+      arch: 'arm64',
+      packageKind: 'release',
+      artifactsDir: 'desktop/build-artifacts/windows-arm64',
+    })
+
+    expect(report.passed).toBe(false)
+    expect(report.missingChecks.some((check) => check.label === 'Windows arm64 unpacked sidecar binary')).toBe(true)
+    expect(report.missingChecks.some((check) => check.label === 'Windows arm64 node-pty native module')).toBe(true)
   })
 
   test('passes Windows directory-only checks for electron-builder --dir output', async () => {
