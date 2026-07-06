@@ -636,9 +636,9 @@ const TabItem = forwardRef<HTMLDivElement, {
         aria-label={`Close ${tab.title || 'Untitled'}`}
         onMouseDown={(e) => { e.stopPropagation() }}
         onClick={(e) => { e.stopPropagation(); onClose() }}
-        className="flex-shrink-0 -mr-0.5 inline-flex h-3 w-3 items-center justify-center bg-transparent p-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-[opacity,color] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] focus-visible:outline-none"
+        className="flex-shrink-0 -mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-transparent p-0 opacity-0 transition-[background-color,opacity,color] text-[var(--color-text-tertiary)] group-hover:opacity-100 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
       >
-        <span className="material-symbols-outlined text-[11px] leading-none">close</span>
+        <span className="material-symbols-outlined text-[13px] leading-none">close</span>
       </button>
     </div>
   )

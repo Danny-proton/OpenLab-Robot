@@ -1217,6 +1217,36 @@ describe('TabBar', () => {
     expect(useTabStore.getState().tabs).toEqual([])
   })
 
+  it('closes the skill center tab from the close button without disconnecting chat sessions', async () => {
+    const { TabBar } = await import('./TabBar')
+    const { SKILL_CENTER_TAB_ID, useTabStore } = await import('../../stores/tabStore')
+    const { useChatStore } = await import('../../stores/chatStore')
+
+    const disconnectSession = vi.fn()
+
+    useTabStore.setState({
+      tabs: [
+        { sessionId: 'tab-1', title: 'First Session', type: 'session', status: 'idle' },
+        { sessionId: SKILL_CENTER_TAB_ID, title: 'Skills', type: 'skill-center', status: 'idle' },
+      ],
+      activeTabId: SKILL_CENTER_TAB_ID,
+    })
+    useChatStore.setState({
+      sessions: {},
+      disconnectSession,
+    } as Partial<ReturnType<typeof useChatStore.getState>>)
+
+    await act(async () => {
+      render(<TabBar />)
+    })
+
+    fireEvent.click(screen.getByLabelText('Close Skills'))
+
+    expect(disconnectSession).not.toHaveBeenCalled()
+    expect(useTabStore.getState().tabs.map((tab) => tab.sessionId)).toEqual(['tab-1'])
+    expect(useTabStore.getState().activeTabId).toBe('tab-1')
+  })
+
   it('opens the bottom terminal panel from the toolbar for an active session', async () => {
     const { TabBar } = await import('./TabBar')
     const { useTabStore } = await import('../../stores/tabStore')

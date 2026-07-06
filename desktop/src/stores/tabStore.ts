@@ -15,6 +15,7 @@ export const WORKBENCH_TAB_PREFIX = '__workbench__'
 export const SUBAGENT_TAB_PREFIX = '__subagent__'
 
 export type TabType = 'session' | 'settings' | 'scheduled' | 'skill-center' | 'terminal' | 'trace' | 'traces' | 'workbench' | 'subagent'
+type PersistentSpecialTabType = 'settings' | 'scheduled' | 'skill-center' | 'traces'
 
 export type Tab = {
   sessionId: string
@@ -55,11 +56,29 @@ type TabStore = {
   restoreTabs: () => Promise<void>
 }
 
+const PERSISTENT_SPECIAL_TAB_IDS: Record<PersistentSpecialTabType, string> = {
+  settings: SETTINGS_TAB_ID,
+  scheduled: SCHEDULED_TAB_ID,
+  'skill-center': SKILL_CENTER_TAB_ID,
+  traces: TRACE_LIST_TAB_ID,
+}
+
+function getPersistentSpecialTabType(tab: Pick<Tab, 'sessionId'> & { type?: TabType }): PersistentSpecialTabType | null {
+  if (tab.sessionId === SETTINGS_TAB_ID) return 'settings'
+  if (tab.sessionId === SCHEDULED_TAB_ID) return 'scheduled'
+  if (tab.sessionId === SKILL_CENTER_TAB_ID) return 'skill-center'
+  if (tab.sessionId === TRACE_LIST_TAB_ID) return 'traces'
+  if (tab.type === 'settings' || tab.type === 'scheduled' || tab.type === 'skill-center' || tab.type === 'traces') {
+    return tab.type
+  }
+  return null
+}
+
 export const useTabStore = create<TabStore>((set, get) => ({
   tabs: [],
   activeTabId: null,
 
-  openTab: (sessionId, title, type = 'session') => {
+  openTab: (sessionId, title, type) => {
     const { tabs } = get()
     const existing = tabs.find((t) => t.sessionId === sessionId)
     if (existing) {
@@ -69,7 +88,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
             ? {
                 ...tab,
                 title,
-                ...(!(tab as Partial<Tab>).type ? { type } : {}),
+                type: type ?? tab.type ?? 'session',
               }
             : tab,
         ),
@@ -77,7 +96,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
       })
     } else {
       set({
-        tabs: [...tabs, { sessionId, title, type, status: 'idle' }],
+        tabs: [...tabs, { sessionId, title, type: type ?? 'session', status: 'idle' }],
         activeTabId: sessionId,
       })
     }
@@ -311,15 +330,16 @@ export const useTabStore = create<TabStore>((set, get) => ({
       const validTabs: Tab[] = data.openTabs
         .filter((t) => {
           // Special tabs are always valid
-          if (t.type === 'settings' || t.type === 'scheduled' || t.type === 'skill-center' || t.type === 'traces') return true
+          if (getPersistentSpecialTabType(t)) return true
           if (t.type === 'trace') return !!t.traceSessionId && existingIds.has(t.traceSessionId)
           if (t.type === 'terminal') return false
           // Session tabs must exist on server
           return existingIds.has(t.sessionId)
         })
         .map((t) => {
-          if (t.type === 'settings' || t.type === 'scheduled' || t.type === 'skill-center' || t.type === 'traces') {
-            return { sessionId: t.sessionId, title: t.title, type: t.type, status: 'idle' as const }
+          const specialType = getPersistentSpecialTabType(t)
+          if (specialType) {
+            return { sessionId: PERSISTENT_SPECIAL_TAB_IDS[specialType], title: t.title, type: specialType, status: 'idle' as const }
           }
           if (t.type === 'trace' && t.traceSessionId) {
             const sourceTitle = sessions.find((s) => s.id === t.traceSessionId)?.title || t.title

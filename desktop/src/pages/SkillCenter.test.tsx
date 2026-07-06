@@ -263,6 +263,20 @@ describe('SkillCenter', () => {
     expect(detailLayer.querySelector('.skill-market-detail-scrim')).not.toBeNull()
   })
 
+  it('closes the marketplace detail drawer from the close icon', async () => {
+    render(<SkillCenter />)
+    fireEvent.click(await screen.findByRole('button', { name: 'PPT Generator' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'PPT Generator' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close skill details' }))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('skill-market-detail-layer')).not.toBeInTheDocument()
+    })
+    expect(useSkillMarketStore.getState().selectedDetail).toBeNull()
+    expect(useSkillMarketStore.getState().isDetailLoading).toBe(false)
+  })
+
   it('announces detail drawer skeleton loading without visible copy', async () => {
     mockedSkillMarketApi.detail.mockReturnValue(new Promise(() => {}))
 

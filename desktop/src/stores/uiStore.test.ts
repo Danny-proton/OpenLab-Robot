@@ -71,4 +71,12 @@ describe('uiStore settings tab persistence', () => {
 
     expect(useUIStore.getState().activeSettingsTab).toBe('providers')
   })
+
+  it('normalizes the removed Skills settings tab when hydrating persisted state', async () => {
+    window.localStorage.setItem('cc-haha-active-settings-tab', 'skills')
+
+    const { useUIStore } = await import('./uiStore')
+
+    expect(useUIStore.getState().activeSettingsTab).toBe('general')
+  })
 })

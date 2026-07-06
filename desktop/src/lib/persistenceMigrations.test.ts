@@ -48,6 +48,26 @@ describe('desktop persistence migrations', () => {
     })
   })
 
+  test('canonicalizes mismatched persisted special tab ids and types during startup migration', () => {
+    window.localStorage.setItem('cc-haha-open-tabs', JSON.stringify({
+      openTabs: [
+        { sessionId: '__settings__', title: 'Settings', type: 'skill-center' },
+        { sessionId: '__skill_center__', title: 'Skills', type: 'settings' },
+      ],
+      activeTabId: '__settings__',
+    }))
+
+    runDesktopPersistenceMigrations()
+
+    expect(JSON.parse(window.localStorage.getItem('cc-haha-open-tabs') || '{}')).toEqual({
+      openTabs: [
+        { sessionId: '__settings__', title: 'Settings', type: 'settings' },
+        { sessionId: '__skill_center__', title: 'Skills', type: 'skill-center' },
+      ],
+      activeTabId: '__settings__',
+    })
+  })
+
   test('filters stale session runtime selections without clearing unrelated keys', () => {
     window.localStorage.setItem('unrelated-user-key', 'keep')
     window.localStorage.setItem('cc-haha-session-runtime', JSON.stringify({

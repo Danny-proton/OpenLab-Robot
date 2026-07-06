@@ -6,7 +6,7 @@ import { useUIStore } from '../../stores/uiStore'
 import { Button } from '../shared/Button'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { PluginCapabilityKey } from '../../types/plugin'
-import { SETTINGS_TAB_ID, useTabStore } from '../../stores/tabStore'
+import { SETTINGS_TAB_ID, SKILL_CENTER_TAB_ID, useTabStore } from '../../stores/tabStore'
 import { useSkillStore } from '../../stores/skillStore'
 import { useAgentStore } from '../../stores/agentStore'
 import { useMcpStore } from '../../stores/mcpStore'
@@ -101,7 +101,7 @@ export function PluginDetail() {
     }
   }
 
-  const openSettingsTab = (tab: 'skills' | 'agents' | 'mcp') => {
+  const openSettingsTab = (tab: 'agents' | 'mcp') => {
     useUIStore.getState().setPendingSettingsTab(tab)
     useTabStore.getState().openTab(SETTINGS_TAB_ID, 'Settings', 'settings')
   }
@@ -114,7 +114,7 @@ export function PluginDetail() {
       })
       return
     }
-    openSettingsTab('skills')
+    useTabStore.getState().openTab(SKILL_CENTER_TAB_ID, t('skillCenter.title'), 'skill-center')
     await fetchSkillDetail('plugin', skillName, currentWorkDir, 'plugins')
 
     const { selectedSkill, error } = useSkillStore.getState()

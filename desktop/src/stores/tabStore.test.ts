@@ -28,6 +28,25 @@ describe('tabStore', () => {
     expect(useTabStore.getState().activeTabId).toBe('session-1')
   })
 
+  it('repairs an existing special tab type when opened through its canonical entrypoint', () => {
+    useTabStore.setState({
+      tabs: [{ sessionId: SETTINGS_TAB_ID, title: 'Skills', type: 'skill-center', status: 'idle' }],
+      activeTabId: SETTINGS_TAB_ID,
+    })
+
+    useTabStore.getState().openTab(SETTINGS_TAB_ID, 'Settings', 'settings')
+
+    expect(useTabStore.getState().tabs).toEqual([
+      {
+        sessionId: SETTINGS_TAB_ID,
+        title: 'Settings',
+        type: 'settings',
+        status: 'idle',
+      },
+    ])
+    expect(useTabStore.getState().activeTabId).toBe(SETTINGS_TAB_ID)
+  })
+
   it('stores a promoted terminal runtime id on new terminal tabs', () => {
     const tabId = useTabStore.getState().openTerminalTab('/tmp/project', '__session_terminal__session-1')
 
@@ -132,5 +151,33 @@ describe('tabStore', () => {
       },
     ])
     expect(useTabStore.getState().activeTabId).toBe(SKILL_CENTER_TAB_ID)
+  })
+
+  it('canonicalizes mismatched persisted special tab ids and types during restore', async () => {
+    localStorage.setItem('cc-haha-open-tabs', JSON.stringify({
+      openTabs: [
+        { sessionId: SETTINGS_TAB_ID, title: 'Settings', type: 'skill-center' },
+        { sessionId: SKILL_CENTER_TAB_ID, title: 'Skills', type: 'settings' },
+      ],
+      activeTabId: SETTINGS_TAB_ID,
+    }))
+
+    await useTabStore.getState().restoreTabs()
+
+    expect(useTabStore.getState().tabs).toEqual([
+      {
+        sessionId: SETTINGS_TAB_ID,
+        title: 'Settings',
+        type: 'settings',
+        status: 'idle',
+      },
+      {
+        sessionId: SKILL_CENTER_TAB_ID,
+        title: 'Skills',
+        type: 'skill-center',
+        status: 'idle',
+      },
+    ])
+    expect(useTabStore.getState().activeTabId).toBe(SETTINGS_TAB_ID)
   })
 })

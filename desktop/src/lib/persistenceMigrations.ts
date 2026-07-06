@@ -21,6 +21,12 @@ const THEME_STORAGE_KEY = 'cc-haha-theme'
 const LOCALE_STORAGE_KEY = 'cc-haha-locale'
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'max']
 const PERSISTED_SPECIAL_TAB_TYPES = ['settings', 'scheduled', 'skill-center', 'traces'] as const
+const PERSISTED_SPECIAL_TAB_IDS: Record<(typeof PERSISTED_SPECIAL_TAB_TYPES)[number], string> = {
+  settings: '__settings__',
+  scheduled: '__scheduled__',
+  'skill-center': '__skill_center__',
+  traces: '__traces__',
+}
 const SUPPORTED_LOCALES = ['en', 'zh', 'zh-TW', 'jp', 'kr']
 
 function readJson(storage: StorageLike, key: string): unknown {
@@ -35,6 +41,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isPersistedSpecialTabType(value: unknown): value is (typeof PERSISTED_SPECIAL_TAB_TYPES)[number] {
   return typeof value === 'string' && (PERSISTED_SPECIAL_TAB_TYPES as readonly string[]).includes(value)
+}
+
+function getPersistedSpecialTabType(tab: Record<string, unknown>): (typeof PERSISTED_SPECIAL_TAB_TYPES)[number] | null {
+  if (tab.sessionId === '__settings__') return 'settings'
+  if (tab.sessionId === '__scheduled__') return 'scheduled'
+  if (tab.sessionId === '__skill_center__') return 'skill-center'
+  if (tab.sessionId === '__traces__') return 'traces'
+  return isPersistedSpecialTabType(tab.type) ? tab.type : null
 }
 
 function writeJson(storage: StorageLike, key: string, value: unknown): void {
@@ -56,13 +70,14 @@ function migrateTabs(storage: StorageLike, report: DesktopMigrationReport): void
       .filter((tab): tab is Record<string, unknown> => isRecord(tab))
       .filter((tab) => typeof tab.sessionId === 'string' && typeof tab.title === 'string')
       .filter((tab) => tab.type !== 'terminal' && !String(tab.sessionId).startsWith('__terminal__'))
-      .map((tab) => ({
-        sessionId: tab.sessionId as string,
-        title: tab.title as string,
-        type: isPersistedSpecialTabType(tab.type)
-          ? tab.type
-          : 'session',
-      }))
+      .map((tab) => {
+        const specialType = getPersistedSpecialTabType(tab)
+        return {
+          sessionId: specialType ? PERSISTED_SPECIAL_TAB_IDS[specialType] : tab.sessionId as string,
+          title: tab.title as string,
+          type: specialType ?? 'session',
+        }
+      })
     const activeTabId =
       isRecord(parsed) &&
       typeof parsed.activeTabId === 'string' &&

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -51,6 +51,7 @@ vi.mock('../stores/agentStore', () => ({
 describe('Settings > Skills compatibility entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     useSettingsStore.setState({ locale: 'en' })
     useTabStore.setState(useTabStore.getInitialState(), true)
     useUIStore.setState({
@@ -59,21 +60,30 @@ describe('Settings > Skills compatibility entry', () => {
     })
   })
 
-  it('opens the unified Skill Center from the legacy settings tab button', () => {
+  it('does not keep the removed Skills entry inside Settings navigation', () => {
     render(<Settings />)
 
-    fireEvent.click(screen.getByText('Skills'))
-
-    expect(useTabStore.getState().activeTabId).toBe(SKILL_CENTER_TAB_ID)
-    expect(useTabStore.getState().tabs).toContainEqual({
-      sessionId: SKILL_CENTER_TAB_ID,
-      title: 'Skills',
-      type: 'skill-center',
-      status: 'idle',
-    })
+    expect(screen.queryByRole('button', { name: 'Skills' })).not.toBeInTheDocument()
   })
 
-  it('redirects pending legacy skills settings navigation to the Skill Center', async () => {
+  it('normalizes a legacy active Skills settings tab back to General', async () => {
+    const fetchOutputStyles = vi.fn().mockResolvedValue(undefined)
+    useSettingsStore.setState({ fetchOutputStyles })
+    useUIStore.setState({
+      activeSettingsTab: 'skills',
+      pendingSettingsTab: null,
+    })
+
+    render(<Settings />)
+
+    await waitFor(() => {
+      expect(useUIStore.getState().activeSettingsTab).toBe('general')
+    })
+    expect(useTabStore.getState().activeTabId).not.toBe(SKILL_CENTER_TAB_ID)
+    expect(fetchOutputStyles).toHaveBeenCalled()
+  })
+
+  it('redirects pending legacy skills settings navigation to the Skill Center without persisting it', async () => {
     useUIStore.setState({
       activeSettingsTab: 'providers',
       pendingSettingsTab: 'skills',
@@ -85,5 +95,7 @@ describe('Settings > Skills compatibility entry', () => {
       expect(useTabStore.getState().activeTabId).toBe(SKILL_CENTER_TAB_ID)
     })
     expect(useUIStore.getState().pendingSettingsTab).toBeNull()
+    expect(useUIStore.getState().activeSettingsTab).toBe('providers')
+    expect(localStorage.getItem('cc-haha-active-settings-tab')).not.toBe('skills')
   })
 })

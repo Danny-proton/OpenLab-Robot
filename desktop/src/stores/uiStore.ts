@@ -37,6 +37,7 @@ function isSettingsTab(value: unknown): value is SettingsTab {
 function getStoredSettingsTab(): SettingsTab {
   try {
     const stored = localStorage.getItem(ACTIVE_SETTINGS_TAB_STORAGE_KEY)
+    if (stored === 'skills') return 'general'
     if (isSettingsTab(stored)) return stored
   } catch { /* localStorage unavailable */ }
   return 'providers'
@@ -134,8 +135,9 @@ export const useUIStore = create<UIStore>((set) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setActiveView: (view) => set({ activeView: view }),
   setActiveSettingsTab: (tab) => {
-    try { localStorage.setItem(ACTIVE_SETTINGS_TAB_STORAGE_KEY, tab) } catch { /* noop */ }
-    set({ activeSettingsTab: tab })
+    const next = tab === 'skills' ? 'general' : tab
+    try { localStorage.setItem(ACTIVE_SETTINGS_TAB_STORAGE_KEY, next) } catch { /* noop */ }
+    set({ activeSettingsTab: next })
   },
   setPendingSettingsTab: (tab) => set({ pendingSettingsTab: tab }),
   setPendingMemoryPath: (path) => set({ pendingMemoryPath: path }),

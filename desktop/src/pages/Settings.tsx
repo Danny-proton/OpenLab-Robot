@@ -194,21 +194,27 @@ function buildH5PublicBaseUrlFromHostDraft(draft: string, currentBaseUrl: string
 }
 
 export function Settings() {
-  const activeTab = useUIStore((s) => s.activeSettingsTab)
+  const activeSettingsTab = useUIStore((s) => s.activeSettingsTab)
+  const activeTab = activeSettingsTab === 'skills' ? 'general' : activeSettingsTab
   const setActiveTab = useUIStore((s) => s.setActiveSettingsTab)
   const pendingSettingsTab = useUIStore((s) => s.pendingSettingsTab)
   const t = useTranslation()
 
   useEffect(() => {
     if (!pendingSettingsTab) return
+    if (pendingSettingsTab === 'skills') {
+      useUIStore.getState().setPendingSettingsTab(null)
+      useTabStore.getState().openTab(SKILL_CENTER_TAB_ID, t('skillCenter.title'), 'skill-center')
+      return
+    }
     setActiveTab(pendingSettingsTab)
     useUIStore.getState().setPendingSettingsTab(null)
-  }, [pendingSettingsTab, setActiveTab])
+  }, [pendingSettingsTab, setActiveTab, t])
 
   useEffect(() => {
-    if (activeTab !== 'skills') return
-    useTabStore.getState().openTab(SKILL_CENTER_TAB_ID, t('skillCenter.title'), 'skill-center')
-  }, [activeTab, t])
+    if (activeSettingsTab !== 'skills') return
+    setActiveTab('general')
+  }, [activeSettingsTab, setActiveTab])
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[var(--color-surface)]">
@@ -223,12 +229,6 @@ export function Settings() {
             <TabButton icon="terminal" label={t('settings.tab.terminal')} active={activeTab === 'terminal'} onClick={() => setActiveTab('terminal')} />
             <TabButton icon="dns" label={t('settings.tab.mcp')} active={activeTab === 'mcp'} onClick={() => setActiveTab('mcp')} />
             <TabButton icon="smart_toy" label={t('settings.tab.agents')} active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
-            <TabButton
-              icon="auto_awesome"
-              label={t('settings.tab.skills')}
-              active={activeTab === 'skills'}
-              onClick={() => useTabStore.getState().openTab(SKILL_CENTER_TAB_ID, t('skillCenter.title'), 'skill-center')}
-            />
             <TabButton icon="history_edu" label={t('settings.tab.memory')} active={activeTab === 'memory'} onClick={() => setActiveTab('memory')} />
             <TabButton icon="extension" label={t('settings.tab.plugins')} active={activeTab === 'plugins'} onClick={() => setActiveTab('plugins')} />
             <TabButton icon="mouse" label={t('settings.tab.computerUse')} active={activeTab === 'computerUse'} onClick={() => setActiveTab('computerUse')} />
@@ -251,7 +251,6 @@ export function Settings() {
           {activeTab === 'terminal' && <TerminalSettings showPreferences />}
           {activeTab === 'mcp' && <McpSettings />}
           {activeTab === 'agents' && <AgentsSettings />}
-          {activeTab === 'skills' && <SkillSettings />}
           {activeTab === 'memory' && <MemorySettings />}
           {activeTab === 'plugins' && <PluginSettings />}
           {activeTab === 'computerUse' && <ComputerUseSettings />}
@@ -4326,31 +4325,6 @@ function DetailStat({
     </div>
   )
 }
-// ─── Skill Settings ──────────────────────────────────────
-
-function SkillSettings() {
-  const t = useTranslation()
-
-  return (
-    <div className="w-full min-w-0 max-w-2xl">
-      <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">
-        {t('settings.skills.title')}
-      </h2>
-      <p className="text-sm text-[var(--color-text-tertiary)] mb-4">
-        {t('settings.skills.redirectDescription')}
-      </p>
-      <button
-        type="button"
-        onClick={() => useTabStore.getState().openTab(SKILL_CENTER_TAB_ID, t('skillCenter.title'), 'skill-center')}
-        className="inline-flex h-10 items-center gap-2 rounded-md bg-[var(--color-brand)] px-4 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-brand-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
-      >
-        <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-        {t('settings.skills.openSkillCenter')}
-      </button>
-    </div>
-  )
-}
-
 function PluginSettings() {
   const selectedPlugin = usePluginStore((s) => s.selectedPlugin)
   const t = useTranslation()
