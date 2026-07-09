@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore'
 import { useTranslation, type TranslationKey } from '../../i18n'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import { GlobalSearchModal } from '../search/GlobalSearchModal'
+import { FindInPageModal } from '../search/FindInPageModal'
 import type { SessionListItem } from '../../types/session'
 import { useTabStore, SETTINGS_TAB_ID, SCHEDULED_TAB_ID, MARKET_TAB_ID } from '../../stores/tabStore'
 import { useChatStore } from '../../stores/chatStore'
@@ -1221,6 +1222,7 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
       />
 
       <GlobalSearchModal open={activeModal === 'globalSearch'} onClose={closeModal} />
+      <FindInPageModal open={activeModal === 'findInPage'} onClose={closeModal} />
     </aside>
   )
 }

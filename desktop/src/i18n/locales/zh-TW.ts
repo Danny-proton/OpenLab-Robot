@@ -1153,7 +1153,7 @@ export const zh: Record<TranslationKey, string> = {
 
   // ─── Empty Session ──────────────────────────────────────
   'empty.title': '新建會話',
-  'empty.subtitle': '開始一個新的編碼會話。Claude 已準備好幫你構建、除錯和架構你的專案。',
+  'empty.subtitle': '開始一個新的編碼會話。Claude 已準備好幫你構建、除錯和設計你的專案。',
   'empty.placeholder': '隨便問點什麼...',
   'empty.addFiles': '新增檔案或圖片',
   'empty.slashCommands': '斜槓命令',
