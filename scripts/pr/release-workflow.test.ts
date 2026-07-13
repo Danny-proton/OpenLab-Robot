@@ -532,6 +532,8 @@ describe('release desktop workflow', () => {
     expect(recoveryHelper).toContain('Active CLAUDE_CONFIG_DIR is managed outside Claude Code Haha')
     expect(recoveryHelper).toContain('Test-LexicalPathAtOrBelow')
     expect(recoveryHelper).toContain('-SharedInstallDirs @($PerMachineInstallDir)')
+    expect(recoveryHelper).toContain("function Invoke-LegacyRecovery {\n  param(\n    [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]]$InstallDirs")
+    expect(recoveryHelper).toContain('$installDirInputs.Count -eq 0')
     expect(recoveryHelper).toContain('$sharedInstallDirInputs.Count -gt 0')
     expect(recoveryHelper).toContain('per-user default-mode reinstall scanned the packaged application tree')
     expect(recoveryHelper).toContain('untrusted-elevated')

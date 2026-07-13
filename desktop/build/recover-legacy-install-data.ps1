@@ -635,7 +635,7 @@ function Write-AppModeAtomically {
 
 function Invoke-LegacyRecovery {
   param(
-    [Parameter(Mandatory = $true)][string[]]$InstallDirs,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]]$InstallDirs,
     [AllowEmptyCollection()][AllowEmptyString()][string[]]$SharedInstallDirs = @(),
     [Parameter(Mandatory = $true)][string]$UserDataDir,
     [Parameter(Mandatory = $true)][string]$RecoveryRoot,
@@ -646,7 +646,11 @@ function Invoke-LegacyRecovery {
     [switch]$SkipProcessCheck
   )
 
-  $potentialInstallDirs = @(Get-PotentialInstallDirs -InstallDirs $InstallDirs)
+  $installDirInputs = @($InstallDirs | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+  if ($installDirInputs.Count -eq 0) {
+    return $null
+  }
+  $potentialInstallDirs = @(Get-PotentialInstallDirs -InstallDirs $installDirInputs)
   $existingInstallDirs = @(Get-ExistingInstallDirs -InstallDirs $potentialInstallDirs)
   if ($existingInstallDirs.Count -eq 0) {
     return $null
@@ -809,7 +813,7 @@ function Run-SelfTest {
     New-Item -ItemType Directory -Path $perUserExternalTarget -Force | Out-Null
     New-Item -ItemType Junction -Path $perUserAppPayload -Target $perUserExternalTarget | Out-Null
     $perUserResult = Invoke-LegacyRecovery `
-      -InstallDirs @($perUserInstall) -SharedInstallDirs @('') `
+      -InstallDirs @('', $perUserInstall, '') -SharedInstallDirs @('') `
       -UserDataDir (Join-Path $testRoot 'per-user app data') `
       -RecoveryRoot (Join-Path $testRoot 'per-user recovery') -ProcessName $ProcessName `
       -ActiveConfigDir '' -SkipProcessCheck
