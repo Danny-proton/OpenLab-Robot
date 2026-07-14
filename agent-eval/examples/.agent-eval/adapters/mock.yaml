@@ -1,0 +1,24 @@
+# mock adapter — 内置，不需要后端就能跑通 pipeline
+# 这个文件存在只是为了让 config.yaml 里 adapter: mock 有对应文件可读
+# 实际 mock 逻辑在 scripts/common.py 的 _call_mock 函数里
+
+type: mock
+description: |
+  mock adapter 根据 case 内容模拟一条"基本正确但故意制造一些失败"的 trace。
+  
+  行为规则（让 demo 既有成功也有失败）：
+  - 如果 case.expected_tools.required 包含 'analyze_cashflow' 且 case.id 以 '001' 结尾，
+    mock 会故意漏调这个工具，制造 F3.1 失败。
+  - 如果 case.business_rules.must_satisfy 里有 id 含 'missing_guarantee' 的规则，
+    mock 的 final_answer 不会提到"担保"，制造 F7.3 失败。
+  - 其他 case mock 会调全工具并给出合规答案。
+  
+  这意味着 train.yaml 里的 loan_risk_001 会失败（F3.1 + F7.3），
+  loan_risk_002 和 loan_risk_003 会成功。
+  regression.yaml 里的 case 全部成功。
+  
+  用 mock 跑 baseline 后可以看到 baseline 不完美，diagnoser 会归因到 F3.1 和 F7.3，
+  mutator 会生成 candidate patch，但因为 mock 不会真的改 prompt，
+  A/B 时 candidate 还是同样的失败——这是预期的，用来看 A/B 流程。
+  
+  接真实 Spring AI agent 时，把 config.yaml 里 adapter 改成 spring_ai_http。

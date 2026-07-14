@@ -1,0 +1,36 @@
+# Generic JSON → UATR adapter 配置
+# 用于任意 JSON trace 格式，用户自定义字段映射
+
+framework: generic
+description: |
+  通用 JSON trace → UATR 转换器配置。
+  用于不直接支持 Spring AI 或 Claude Code 的场景。
+  用户需要根据自己的 trace 格式配置 field_mapping。
+
+# 字段映射（UATR 字段名 → raw 字段的 dot-path）
+# 键是 UATR 字段，值是 raw 字段路径（支持 dot-path）
+mapping:
+  event_type: eventType          # 必须映射到合法 UATR event_type
+  timestamp: ts                  # 或 timestamp
+  case_id: caseId
+  run_id: runId
+  case_run_id: caseRunId
+  trace_id: traceId
+  span_id: spanId
+  parent_span_id: parentSpanId
+  framework: framework           # 可选，默认 generic
+  source: source                 # 可选
+  status: status                 # 可选，默认 success
+
+# 如果 raw 里的 event 值不是 UATR 合法 event_type，可以在这里映射
+event_type_mapping:
+  start: agent.run.start
+  end: agent.run.end
+  call: tool.call.start
+  result: tool.call.end
+  error: tool.call.error
+  retrieve: memory.retrieve.end
+  step: planner.step
+
+# 脱敏字段
+redact_fields: []

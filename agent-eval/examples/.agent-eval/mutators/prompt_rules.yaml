@@ -1,0 +1,121 @@
+# Prompt mutation rules
+# diagnoser 归因到 F2/F7 时，mutator 在这里查 mutation 规则
+
+rules:
+  - id: F2.1_task_type_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 开头增加任务类型识别段
+    why: |
+      F2.1 的特征是 model_call 后无 tool_call 直接 agent_final，
+      说明 agent 没意识到这是需要分析的任务。
+      在 prompt 开头明确任务类型，能强制 agent 先分析再下结论。
+    how: |
+      在 system prompt 最前面加：
+      
+      ## 任务识别
+      当用户说"分析贷款申请是否有风险"时，本 agent 的任务是：
+      1. 加载贷款申请
+      2. 分析流水波动
+      3. 检查负债比例
+      4. 检查担保信息
+      5. 综合给出是否需要补充材料的结论
+      
+      禁止跳过分析直接给结论。
+
+  - id: F2.2_stage_awareness_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 增加阶段判断逻辑
+    why: |
+      F2.2 是 agent 没识别当前处于哪个阶段，跳过了必要步骤。
+    how: |
+      在 prompt 中加：
+      
+      ## 阶段判断
+      分析前先判断当前阶段：
+      - 初审：必须分析流水、负债、担保三方面
+      - 复审：在初审结论基础上检查是否解决了一审提出的问题
+      - 终审：仅校验材料完整性，不再重新分析
+
+  - id: F2.3_hard_constraints_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 增加硬约束清单
+    why: |
+      F2.3 是 agent 忽略了硬约束（如"必须先校验担保"）。
+      把约束显式列出来，agent 才会遵守。
+    how: |
+      在 prompt 中加：
+      
+      ## 硬约束（违反则直接拒绝输出结论）
+      - 必须先调用 load_loan_application 加载完整申请
+      - 必须调用 analyze_cashflow 分析流水
+      - 必须调用 check_debt_ratio 检查负债
+      - 担保信息缺失时不能直接给出通过结论
+      - 禁止调用 approve_loan_directly
+
+  - id: F7.1_output_format_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 增加输出格式说明
+    why: |
+      F7.1 是 final_answer 格式不符合 schema。
+      显式说明格式，agent 才会按格式输出。
+    how: |
+      在 prompt 末尾加：
+      
+      ## 输出格式
+      最终回答必须包含以下关键词：流水波动、负债、补充材料。
+      如果需要结构化输出，使用以下 JSON 格式（用 ```json 包裹）：
+      
+      ```json
+      {
+        "decision": "pass" | "supplement" | "reject",
+        "reasons": ["流水波动大", "负债率超过阈值"],
+        "supplement_items": ["近6个月流水", "担保信息"]
+      }
+      ```
+
+  - id: F7.2_evidence_check_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 增加"每个结论必须引用 tool_result 数据"
+    why: |
+      F7.2 是 final_answer 给了结论但 trace 里没支撑数据。
+    how: |
+      在 prompt 中加：
+      
+      ## 证据要求
+      每个结论必须基于已调用的工具返回的数据。
+      禁止凭空给出"流水波动大"这样的判断，
+      必须先调用 analyze_cashflow 拿到结果再下结论。
+
+  - id: F7.4_no_hallucination_in_prompt
+    target: prompt
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 增加禁止编造数据的约束
+    why: |
+      F7.4 是 final_answer 中出现了 trace 中不存在的数字/ID。
+    how: |
+      在 prompt 中加：
+      
+      ## 禁止编造
+      最终回答中出现的所有数字、ID、名称必须来自：
+      1. 用户的输入
+      2. 工具调用的返回结果
+      
+      禁止凭空生成任何具体数值。
+      如果不确定某项数据，明确说"未获取到 X 数据"。

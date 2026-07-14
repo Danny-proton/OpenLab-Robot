@@ -1,0 +1,31 @@
+name: tool_correctness
+version: 1
+description: 工具调用是否满足 case.expected_tools 约束
+type: hard
+weight: 0.20
+components:
+  - name: required_tool_recall
+    formula: hit_count / required_count
+    source: trace
+    source_filter:
+      event: tool_call
+    description: required 工具的召回率
+  - name: forbidden_tool_violation
+    formula: violation_count
+    source: trace
+    source_filter:
+      event: tool_call
+    hard_fail: true
+    description: forbidden 工具调用次数，>0 即硬失败
+  - name: order_soft_score
+    formula: lcs_ratio(expected.order.soft, actual_tool_call_sequence)
+    source: trace
+    source_filter:
+      event: tool_call
+    description: 与期望顺序的最长公共子序列比例
+aggregate: "0.5 * required_tool_recall + 0.3 * order_soft_score + 0.2 * (1 - min(forbidden_tool_violation, 1))"
+hard_fail: false
+note: |
+  forbidden_tool_violation > 0 时，整条 case 直接 hard_fail，
+  不再走 aggregate 公式。这是 case.scoring.hard_fail_if 里
+  forbidden_tool_called 规则的来源。
