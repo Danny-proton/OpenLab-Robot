@@ -1,0 +1,17 @@
+# mobile-bank-agent-eval 配置
+execution:
+  mode: mock  # mock / http / openlab
+  base_url: ""
+  openlab_bin: ""
+  timeout: 120
+  stream: false
+
+llm:
+  api_key: ""  # 留空则用 mock LLM
+  model: gpt-4o
+  base_url: https://api.openai.com/v1
+
+dimensions:
+  count: 10
+  per_scenario: 3
+  multi_turn: false
