@@ -1,0 +1,1 @@
+import{o as e}from"./core-B-Yn7Oz1.js";async function t(t,n){await e(`plugin:shell|open`,{path:t,with:n})}export{t as open};

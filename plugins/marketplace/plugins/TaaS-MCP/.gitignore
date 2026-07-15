@@ -1,0 +1,5 @@
+.env
+.auth_token*
+.active_environment
+*.log
+package-lock.json

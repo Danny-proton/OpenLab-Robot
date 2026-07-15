@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "taas": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/build/src/index.js"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
+        "PLUGIN_PATH": "${CLAUDE_PLUGIN_DATA}"
+      }
+    }
+  }
+}

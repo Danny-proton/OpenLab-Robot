@@ -1,0 +1,25 @@
+{
+    "name": "openlab-ai-robot-plugin-marketplace",
+    "description": "",
+    "owner": {
+        "name": "Openlab AI Team"
+    },
+    "version": "0.3.0",
+    "plugins": [
+        {
+            "name": "chrome-devtools-mcp",
+            "source": "./plugins/chrome-devtools-mcp",
+            "description": "Bundled plugins for actuating and debugging the Chrome browser."
+        },
+        {
+            "name": "taas-mcp",
+            "source": "./plugins/TaaS-MCP",
+            "description": "TaaS测试系统MCP服务插件"
+        },
+        {
+            "name": "website-traversing",
+            "source": "./plugins/website-traversing",
+            "description": "Web待测系统自主遍历测试插件"
+        }
+    ]
+}

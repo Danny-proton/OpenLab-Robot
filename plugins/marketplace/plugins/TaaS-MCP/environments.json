@@ -1,0 +1,28 @@
+{
+  "production": {
+    "baseUrl": "https://openlab.huawei.com",
+    "authTokenPath": ".auth_token",
+    "displayName": "生产环境"
+  },
+  "beta": {
+    "baseUrl": "https://beta.openlab.huawei.com",
+    "authTokenPath": ".auth_token.beta",
+    "displayName": "Beta 环境"
+  },
+  "uat": {
+    "baseUrl": "https://openlab.huawei.com",
+    "authTokenPath": ".auth_token.uat",
+    "displayName": "UAT 环境"
+  },
+  "alpha": {
+    "baseUrl": "https://alpha.openlab.huawei.com",
+    "authTokenPath": ".auth_token.alpha",
+    "displayName": "Alpha 环境"
+  },
+  "blue": {
+    "baseUrl": "https://120.46.183.136:5962",
+    "authTokenPath": ".auth_token.blue",
+    "displayName": "蓝区环境",
+    "loginUrl": "https://openlab.huawei.com/iportalBlue/#/myProject"
+  }
+}
