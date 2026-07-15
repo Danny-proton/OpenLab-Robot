@@ -1,20 +1,25 @@
 # Agent Eval Skill 版本历史
 
+## v2.2.0-mobile-bank (2026-07-15)
+
+手机银行定制版本。基于 agent-eval v2.1.0，增加四阶段流水线：
+
+- 阶段1: 需求分析（generate_requirements.py → Excel）
+- 阶段2: 用例生成（generate_testcases.py → Excel）
+- 阶段3: 用例执行（execute_testcases.py → Excel）
+- 阶段4: 报告生成（generate_report.py → HTML+MD）
+
+保留原始 Excel 输入输出格式，结合 agent-eval 的 F1-F8 诊断/HRPO/reference/auto_patcher 能力。
+大 skill 套小 skill 结构：5 个子 skill 对应各阶段。
+
 ## v2.1.0 (2026-07-14)
 
-基于用户提供的 `agent_eval_skill_main.zip` 增强版同步，新增 5 个脚本：
-
-- `memory_kb.py` — KnowledgeCycle 记忆系统（.agent-eval/.memory/ 读写，兼容 Claude Code memory）
-- `pdf_report.py` — PDF 报告生成器（weasyprint HTML→PDF）
-- `report_manager.py` — 报告 CRUD 管理器（list/get/search/update/delete/reindex）
-- `sidecar.py` — 评测进度状态面板（标准化 JSON，Claude Code 渲染进度卡片）
-- `tracer_scorer.py` — TRACE 五维评测引擎（Trust/Reliability/Adaptability/Convention/Effectiveness）
-
-同时包含用户对 SKILL.md / agents / scripts / guides 的所有增强修改。
+基于用户提供的增强版同步，新增 5 个脚本：
+- memory_kb.py / pdf_report.py / report_manager.py / sidecar.py / tracer_scorer.py
 
 ## v2.0.0 (2026-07-14)
 
-Claude Code 标准 plugin 重构 + agent 符合官方 frontmatter 标准 + trace 调用结构 + Dashboard 修复。
+标准 plugin 重构 + agent 符合官方 frontmatter 标准 + trace 调用结构 + Dashboard 修复。
 
 ## v1.1.0
 
