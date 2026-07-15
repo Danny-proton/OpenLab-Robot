@@ -1,0 +1,59 @@
+# regression split — 接受 patch 之前必须跑的回归集
+# 应该覆盖 train 之外的场景，确保 patch 不引入新问题
+
+cases:
+  - id: reg_simple_001
+    name: 回归-简单通过场景
+    agent: loan-risk-agent
+    task: 简单申请，材料齐全，应该顺利通过。
+    input:
+      user_message: "请帮我分析这个企业贷款申请是否有风险"
+      application_id: "R001"
+    expected:
+      final_decision:
+        contains: ["流水波动", "负债", "补充材料"]
+    expected_tools:
+      required: [load_loan_application, analyze_cashflow, check_debt_ratio]
+      forbidden: [approve_loan_directly]
+    business_rules:
+      must_satisfy:
+        - id: risk_rule_cashflow_volatility
+          description: 流水波动分析
+          trace_event_contains:
+            event: tool_result
+            field: result.summary
+            equals: "mock result of analyze_cashflow"
+        - id: risk_rule_missing_guarantee
+          description: 担保信息分析
+          final_answer_contains: ["担保"]
+    expected_steps: 9
+    scoring:
+      hard_fail_if: [forbidden_tool_called, missing_required_business_rule]
+
+  - id: reg_simple_002
+    name: 回归-担保缺失场景
+    agent: loan-risk-agent
+    task: 担保信息缺失，应该提示补充。
+    input:
+      user_message: "请帮我分析这个企业贷款申请是否有风险"
+      application_id: "R002"
+    expected:
+      final_decision:
+        contains: ["流水波动", "负债", "补充材料"]
+    expected_tools:
+      required: [load_loan_application, analyze_cashflow, check_debt_ratio]
+      forbidden: [approve_loan_directly]
+    business_rules:
+      must_satisfy:
+        - id: risk_rule_cashflow_volatility
+          description: 流水波动分析
+          trace_event_contains:
+            event: tool_result
+            field: result.summary
+            equals: "mock result of analyze_cashflow"
+        - id: risk_rule_missing_guarantee
+          description: 担保信息分析
+          final_answer_contains: ["担保"]
+    expected_steps: 9
+    scoring:
+      hard_fail_if: [forbidden_tool_called, missing_required_business_rule]

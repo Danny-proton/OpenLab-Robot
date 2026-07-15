@@ -1,0 +1,140 @@
+# Tool schema / policy mutation rules
+# diagnoser 归因到 F3/F4 时查这里
+
+rules:
+  - id: F3.1_add_tool_description
+    target: tool_schema
+    target_files:
+      - src/main/java/com/example/agent/tools/LoanTools.java
+    risk: low
+    what: 给被漏调的工具的 @Tool description 增加适用场景说明
+    why: |
+      F3.1 是 agent 没调用 required 工具。
+      常见原因是工具 description 太抽象，agent 不知道何时该用。
+      明确场景后 agent 更容易选对。
+    how: |
+      修改 @Tool 注解的 description，加入"何时用"的说明：
+      
+      @Tool(description = """
+          分析企业流水波动情况。
+          **何时用**：处理贷款申请时必须调用，用于评估近6个月流水稳定性。
+          **何时不用**：已经在本 case 中调用过时不要重复调用。
+          """)
+      public CashflowAnalysis analyze_cashflow(...) { ... }
+
+  - id: F3.2_disambiguate_similar_tools
+    target: tool_schema
+    target_files:
+      - src/main/java/com/example/agent/tools/LoanTools.java
+    risk: medium
+    what: 给相似工具增加排他说明
+    why: |
+      F3.2 是调错了相似工具。明确区分"用 A 当 X，用 B 当 Y"。
+    how: |
+      在两个相似工具的 description 里互相提及：
+      
+      # 工具 A
+      @Tool(description = "加载贷款申请。用本工具，不要用 load_application_legacy。")
+      
+      # 工具 B
+      @Tool(description = "（已弃用）加载旧版申请。新 case 不要用本工具，用 load_loan_application。")
+
+  - id: F3.3_dedup_policy
+    target: tool_policy
+    target_files:
+      - src/main/java/com/example/agent/config/ToolPolicyConfig.java
+    risk: medium
+    what: 增加同工具同参数 3 次后禁用规则
+    why: |
+      F3.3 是 agent 重复调用同一工具同一参数。
+      Tool Policy 层拦截比改 prompt 更可靠。
+    how: |
+      在 ToolPolicyConfig 中增加：
+      
+      @Bean
+      public ToolCallbackWrapper dedupWrapper() {
+        return new DedupToolCallbackWrapper(3);  // 同 tool+args hash 3 次后拒绝
+      }
+
+  - id: F3.4_order_in_prompt_or_policy
+    target: tool_policy
+    target_files:
+      - src/main/java/com/example/agent/config/ToolPolicyConfig.java
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 system prompt 里增加工具调用顺序说明
+    why: |
+      F3.4 是工具调用顺序偏离期望。
+    how: |
+      在 prompt 中加：
+      
+      ## 工具调用顺序
+      1. load_loan_application
+      2. analyze_cashflow
+      3. check_debt_ratio
+      4. (可选) check_guarantee_info
+
+  - id: F4.1_required_args_in_schema
+    target: tool_schema
+    target_files:
+      - src/main/java/com/example/agent/tools/LoanTools.java
+    risk: low
+    what: 在 @Tool 参数 description 里明确标注 required
+    why: F4.1 是必填参数没传。显式标注 required 能减少遗漏。
+    how: |
+      @Tool(description = "...")
+      public Result analyze_cashflow(
+          @P("贷款申请 ID，必填，从 load_loan_application 的返回中获取") String applicationId,
+          ...
+      ) { ... }
+
+  - id: F4.2_field_mapping_in_memory
+    target: memory
+    target_files:
+      - .agent-eval/agent_assets/field_mappings.md
+    risk: low
+    what: 在 Memory/Reference 里增加字段映射表
+    why: |
+      F4.2 是从用户输入到工具参数的映射错。
+      把映射表写到 memory 里，agent 检索后能正确传参。
+    how: |
+      创建 .agent-eval/agent_assets/field_mappings.md：
+      
+      ## 字段映射表
+      | 用户输入字段 | 工具参数字段 | 说明 |
+      |-------------|-------------|------|
+      | application_id | applicationId | 贷款申请 ID |
+      | applicant_name | applicantName | 申请人姓名 |
+      
+      在 system prompt 中引用此表。
+
+  - id: F4.3_enum_in_schema
+    target: tool_schema
+    target_files:
+      - src/main/java/com/example/agent/tools/LoanTools.java
+    risk: low
+    what: 在 @Tool schema 里增加 enum 约束
+    why: F4.3 是参数值不在合法 enum 里。
+    how: |
+      使用 @Schema(enumAsRef = true) 或在 description 里列出合法值：
+      
+      @P("风险等级，合法值：LOW, MEDIUM, HIGH") String riskLevel
+
+  - id: F4.4_id_validation
+    target: tool_schema
+    target_files:
+      - src/main/java/com/example/agent/tools/LoanTools.java
+    risk: medium
+    what: 增加参数校验 + 工具返回 404 时的可恢复提示
+    why: |
+      F4.4 是传了错的 ID 导致工具失败。
+      返回可恢复提示能让 agent 切换到 list_X 工具重新查询。
+    how: |
+      在工具实现中：
+      
+      if (!applicationExists(applicationId)) {
+          throw new ToolException(
+              "application_id " + applicationId + " 不存在。" +
+              "建议：先调用 list_loan_applications 查询有效 ID。"
+          );
+      }
