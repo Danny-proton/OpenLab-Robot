@@ -7,18 +7,18 @@
 
 **Agent 测试从"凭感觉"转为"可设计、可度量、可维护"的工程体系。**
 
-不是平台，是 Claude Code Skill 驱动的本地工作流。核心资产在本地、Git 可追踪、可回滚。
+不是平台，是 skill 驱动的本地工作流。核心资产在本地、Git 可追踪、可回滚。
 
 ## 二、能力全景（6 层）
 
 | 层 | 能力 | 现状 | PRD 文档 |
 |----|------|------|---------|
-| L1 测试设计 | 需求分解→SPEC解析→因子提取→方法选择→用例生成→自检→自优化 | 30% | [PRD_CASE_SELF_OPTIMIZATION.md](PRD_CASE_SELF_OPTIMIZATION.md) |
-| L2 测试执行 | mock/HTTP/OpenLab Robot + UATR trace + 断言验证 | 100% | 已完成 |
-| L3 评测诊断 | 5硬+3软+TRACE五维 + F1-F8 + HRPO + 9 Judge | 100% | 已完成 |
-| L4 优化回归 | reference注入 + auto_patcher + Gatekeeper + CI | 100% | 已完成 |
-| L5 报告可视化 | HTML 11节 + Dashboard 10页 + PDF + CRUD | 95% | 已完成 |
-| L6 流程管控 | 用例沉淀/进度监控/spec归档/优化器选择/黑白灰盒管理 | 40% | [PRD_ORCHESTRATION.md](PRD_ORCHESTRATION.md) |
+| L1 测试设计 | 需求分解→SPEC解析→因子提取→方法选择→用例生成→自检→自优化 | 20% | [PRD_CASE_SELF_OPTIMIZATION.md](PRD_CASE_SELF_OPTIMIZATION.md) |
+| L2 测试执行 | mock/HTTP/OpenLab Robot + UATR trace + 断言验证 | 60% | 已完成 |
+| L3 评测诊断 | 5硬+3软+TRACE五维 + F1-F8 + HRPO + 9 Judge | 60% | 已完成 |
+| L4 优化回归 | reference注入 + auto_patcher + Gatekeeper + CI | 60% | 已完成 |
+| L5 报告可视化 | HTML 11节 + Dashboard 10页 + PDF + CRUD | 50% | 已完成 |
+| L6 流程管控 | 用例沉淀/进度监控/spec归档/优化器选择/黑白灰盒管理 | 20% | [PRD_ORCHESTRATION.md](PRD_ORCHESTRATION.md) |
 
 ## 三、业界对标
 

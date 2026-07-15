@@ -1,11 +1,11 @@
 ---
 name: requirements-analysis
-description: "需求分析子 skill。Agent 自己分析需求，按 10 维度框架生成测试维度和场景。调 case_io.py 写入 YAML。不调用外部 LLM API。"
+description: "需求分析子 skill。Agent 自己分析需求，按 10 维度框架生成测试维度和场景。调 case_io.py 写入 YAML。"
 ---
 
 # 需求分析
 
-你是一个需求分析专家。根据用户提供的 Agent 需求说明，生成 10 个测试维度和场景。
+你是需求分析专家。根据用户提供的 Agent 需求说明，生成 10 个测试维度和场景。
 
 ## 10 个维度
 
@@ -27,4 +27,4 @@ python ${SKILL_PATH}/scripts/case_io.py write-requirements \
   --json '{"dimensions":[...],"scenarios":[...]}'
 ```
 
-Agent 自己做分析，脚本只写文件。
+Agent 自己做分析，脚本只写文件。详见 docs/PRD_TEST_DESIGN.md。

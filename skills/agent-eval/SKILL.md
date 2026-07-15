@@ -1,241 +1,228 @@
 ---
 name: agent-eval
-description: Agent 评测与优化。当用户要测试、诊断、优化、A/B 验证、对比 Agent 行为、工具调用、工作流质量、业务规则合规、输出格式、skill 触发时使用。覆盖 OpenLab Robot (cc-haha) / Claude Code skill / Spring AI agent。支持 F1-F8 失败归因、HRPO 层次化根因、reference 自动注入、auto_patcher 全自动优化。即使用户只提一个组件（如"工具调用错了"）也触发，因为框架把 prompt/tool schema/tool policy/workflow/memory/skill 作为独立优化目标。
-allowed-tools: Bash(python *), Bash(python3 *), Bash(git *), Bash(ls *), Bash(cat *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(diff *), Bash(wc *), Bash(head *), Bash(tail *), Read, Write, Edit, Grep, Glob, AskUserQuestion
+description: Agent 评测与优化。当用户要测试、诊断、优化、A/B 验证、对比 Agent 行为、工具调用、工作流质量、业务规则合规、输出格式、skill 触发时使用。覆盖 OpenLab Robot (cc-haha) / Spring AI agent / 任意 HTTP agent。支持需求分析、用例生成、用例自优化、F1-F8 失败归因、HRPO 层次化根因、reference 自动注入、auto_patcher 全自动优化。即使用户只提一个组件也触发，因为框架把 prompt/tool schema/tool policy/workflow/memory/skill 作为独立优化目标。
+allowed-tools: Bash(python *), Bash(python3 *), Bash(git *), Bash(ls *), Bash(cat *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(diff *), Bash(wc *), Bash(head *), Bash(tail *), Read, Write, Edit, Grep, Glob, Task, AskUserQuestion
 ---
 
 # Agent 评测与优化 Skill
 
 你的职责是**评测并改进一个 Agent 系统**，不是只改 prompt。
 
-## 轻量版说明
+## 目录结构
 
-这是**轻量 skill 嵌套版**——无 MCP server、无 hooks，所有能力通过 Bash 直接调 Python 脚本实现。
-
-**目录结构**（skill 嵌套）：
 ```
-agent-eval/                    ← skill 根目录
+agent-eval/
 ├── SKILL.md                   ← 本文件
-├── scripts/                   ← Python 脚本（直接 Bash 调）
-│   ├── common.py
-│   ├── eval_runner.py
-│   ├── diagnoser.py
-│   ├── multi_judge.py
-│   ├── opik_adapter.py
-│   ├── reference_optimizer.py
-│   ├── auto_patcher.py
-│   ├── html_report.py
-│   ├── dashboard.py
-│   ├── ci_regression.py
-│   ├── ask_setup.py
-│   └── adapters/
-│       ├── openlab_robot_adapter.py
-│       └── ...
-├── agents/                    ← 9 个评审 Agent（Claude 自动委托）
+├── scripts/                   ← Python 脚本
+│   ├── common.py              ← 公共工具（adapter/trace/YAML）
+│   ├── eval_runner.py         ← 执行器（跑 case → trace → scores）
+│   ├── scorer.py              ← 评分（5硬+3软+TRACE五维）
+│   ├── diagnoser.py           ← 失败归因 F1-F8
+│   ├── multi_judge.py         ← 多 Judge 评审
+│   ├── opik_adapter.py        ← HRPO 层次化根因
+│   ├── reference_optimizer.py ← reference 自动注入
+│   ├── auto_patcher.py        ← 全自动优化循环
+│   ├── html_report.py         ← HTML 报告
+│   ├── dashboard.py           ← 交互式 Dashboard
+│   ├── ci_regression.py       ← CI 持续回归
+│   ├── ask_setup.py           ← 信息收集向导
+│   ├── case_io.py             ← YAML 用例读写
+│   ├── excel_adapter.py       ← Excel→YAML 转换
+│   ├── ...                    ← 其余脚本
+│   └── adapters/              ← 执行器适配器
+├── skills/                    ← 子 skill（Agent 自己生成用例）
+│   ├── requirements-analysis/
+│   ├── test-case-design/
+│   └── test-case-self-optimization/
+├── adapters/                  ← 子 skill 形式执行器（占位）
+├── agents/                    ← 9 个评审 agent
 ├── guides/                    ← 15 篇文档
-├── templates/                 ← 报告模板
-└── examples/.agent-eval/      ← 示例配置（scaffold 时复制）
+├── docs/                      ← PRD/设计文档
+└── examples/.agent-eval/      ← 示例配置
 ```
 
-## 工作循环
+## 完整工作流程（8 阶段）
 
-> 💬 = 需要用户交互确认 | ⚡ = 自动执行 | 📊 = 生成产物
-
-1. **启动前** 💬：跑 `ask_setup.py --stage startup --emit-questions` 收集缺失信息，用 AskUserQuestion 问用户；结束后调用 `sidecar.py --status completed --step 1`
-2. **跑基线** 💬⚡：先跑 `ask_setup.py --stage eval --emit-questions` 确认 split/variant/label → `python scripts/eval_runner.py ...`
-3. **诊断** ⚡：`python scripts/diagnoser.py --config .agent-eval/config.yaml --latest`；调用 `sidecar.py --status completed --step 3 --run-id <run_id>`
-4. **多 Judge 评审** 💬⚡：先跑 `ask_setup.py --stage judge --emit-questions` 确认启用的 Judge → `python scripts/multi_judge.py ...`
-5. **HRPO 分析** 💬⚡：先跑 `ask_setup.py --stage optimize --emit-questions` 确认优化器 → `python scripts/opik_adapter.py ...`
-6. **生成 reference** 💬⚡：根据 optimize 配置确认是否自动 apply → `python scripts/reference_optimizer.py ...`
-7. **A/B + 全自动** 💬⚡：先跑 `ask_setup.py --stage abtest --emit-questions` 确认 baseline/patch/threshold → `python scripts/auto_patcher.py ...`
-8. **生成报告** 💬📊：先跑 `ask_setup.py --stage report --emit-questions` 确认格式 → `python scripts/html_report.py ...`；如需 PDF 再跑 `python scripts/pdf_report.py ...`
-9. **生成 Dashboard** 📊：`python scripts/dashboard.py --config .agent-eval/config.yaml`
-
-### 交互说明
-
-每一步执行前，Claude Code 应先调用对应 `ask_setup.py --stage <stage> --emit-questions`，把返回的 `questions` 用 `AskUserQuestion` 弹窗问用户。用户选择后：
-- 如果是 startup/eval/judge/optimize/abtest/report 阶段，可再跑 `ask_setup.py --stage <stage>`（不带 `--emit-questions`）把选择持久化到 `config.yaml`。
-- 也可以用 `--non-interactive` 跳过弹窗，全部使用默认值，适合 CI/CD。
-
-### SideCar 状态面板
-
-每步开始/结束时调用 `scripts/sidecar.py` 输出 JSON，Claude Code 可据此渲染进度卡片：
+### 阶段 0: 启动前信息收集
 
 ```bash
-python scripts/sidecar.py --status running --step 2 --step-name "跑基线"
-python scripts/sidecar.py --status completed --step 2 --run-id <run_id> --score 0.723
+python ${SKILL_DIR}/scripts/ask_setup.py --stage startup --config .agent-eval/config.yaml --emit-questions
 ```
 
-### KnowledgeCycle 记忆
+用 AskUserQuestion 问用户：adapter 类型 / API key / 路径 / 模型 / 权限 / 成本控制。详见 `guides/15_setup_wizard.md`。
 
-用户偏好和最佳实践自动写入 `.agent-eval/.memory/`：
-
+首次初始化：
 ```bash
-python scripts/memory_kb.py --remember preference --key adapter --value openlab_robot
-python scripts/memory_kb.py --recall preference
+python ${SKILL_DIR}/scripts/eval_runner.py --scaffold .
 ```
 
-## 命令速查
+### 阶段 1: 需求分析
 
-所有脚本在 `${CLAUDE_SKILL_DIR}/scripts/` 下。
+**做什么**：从用户需求文本 / Agent PRD / SPEC，生成 10 个测试维度和场景。
 
-### 0. 启动前信息收集（首次必跑）
+**怎么做**：委托 `skills/requirements-analysis/` 子 skill。Agent 自己分析需求（通过 Task 工具，不在脚本里调 LLM），生成维度+场景 JSON，然后调脚本写文件：
 
 ```bash
-# 输出待问问题 JSON，供 AskUserQuestion 用
-python ${CLAUDE_SKILL_DIR}/scripts/ask_setup.py --stage startup --config .agent-eval/config.yaml --emit-questions
+# Agent 生成 JSON 后，调脚本写 YAML
+python ${SKILL_DIR}/scripts/case_io.py write-requirements \
+  --output .agent-eval/data/requirements.yaml \
+  --json '{"dimensions":[...],"scenarios":[...]}'
 ```
 
-5 个环节：startup / eval / judge / optimize / abtest / report，详见 `guides/15_setup_wizard.md`。
+**产物**：`.agent-eval/data/requirements.yaml`（10 维度 + 场景）
+**文档**：`docs/PRD_TEST_DESIGN.md`
 
-### 1. 首次初始化
+### 阶段 2: 用例设计
+
+**做什么**：根据维度和场景，设计详细测试用例（含多轮/边界/异常）。
+
+**怎么做**：委托 `skills/test-case-design/` 子 skill。Agent 自己设计用例，输出 agent-eval 格式的 case YAML：
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/eval_runner.py --scaffold .
+# Agent 先读需求分析
+python ${SKILL_DIR}/scripts/case_io.py read-requirements \
+  --input .agent-eval/data/requirements.yaml
+
+# Agent 设计完用例后，调脚本写 YAML
+python ${SKILL_DIR}/scripts/case_io.py write-cases \
+  --output .agent-eval/cases/train.yaml \
+  --json '{"cases":[...]}'
 ```
 
-### 2. 跑基线评测
+**产物**：`.agent-eval/cases/train.yaml`（agent-eval 格式用例）
+**文档**：`docs/PRD_TEST_DESIGN.md`
+
+**Excel 输入适配**：如果用户有 Excel 格式用例，用适配器转换：
+```bash
+python ${SKILL_DIR}/scripts/excel_adapter.py \
+  --input test_cases.xlsx --output .agent-eval/cases/train.yaml
+```
+
+### 阶段 3: 用例执行
+
+**做什么**：执行测试用例，收集响应和 UATR trace。
+
+**怎么做**：调 `eval_runner.py`，通过 adapter 执行（mock/http/openlab_robot）：
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/eval_runner.py \
+python ${SKILL_DIR}/scripts/eval_runner.py \
   --config .agent-eval/config.yaml \
   --split train \
   --variant baseline \
   --label <短标签>
 ```
 
-输出：`runs/<run_id>.jsonl` + `traces/<run_id>.jsonl` + `scores/<run_id>.json` + `reports/<run_id>.html` + `scores/<run_id>.charts.json`
+**产物**：
+- `.agent-eval/runs/<run_id>.jsonl` — 每条 case 执行记录
+- `.agent-eval/traces/<run_id>.jsonl` — UATR trace（24 类事件，含调用结构）
+- `.agent-eval/scores/<run_id>.json` — 分数（5硬+3软+TRACE五维）
+- `.agent-eval/reports/<run_id>.md` — 基线报告
 
-### 3. 诊断失败（F1-F8）
+### 阶段 4: 诊断失败
+
+**做什么**：对每条失败 case 做 F1-F8 归因。
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/diagnoser.py \
+python ${SKILL_DIR}/scripts/diagnoser.py \
   --config .agent-eval/config.yaml --latest
 ```
 
-### 4. 多 Judge 评审
+**产物**：`.agent-eval/reports/<run_id>_diagnosis.md` + `.json`
+**文档**：`guides/04_failure_taxonomy.md`
+
+### 阶段 5: 多 Judge 评审
+
+**做什么**：6 个规则型 Judge + Gatekeeper 综合评审。
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/multi_judge.py \
+python ${SKILL_DIR}/scripts/multi_judge.py \
   --config .agent-eval/config.yaml --run <run_id> --split train
 ```
 
-### 5. HRPO 层次化根因分析
+**产物**：`.agent-eval/reports/<run_id>_judges.md` + `.json`（含 Agreement Matrix）
+**文档**：`guides/09_multi_judge.md`
+
+### 阶段 6: 报告生成
+
+**做什么**：生成 HTML + Markdown 报告（11 节 + 9 SVG 图表 + 调用结构树）。
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/opik_adapter.py \
+python ${SKILL_DIR}/scripts/html_report.py \
+  --config .agent-eval/config.yaml --run <run_id> --split train
+```
+
+可选 PDF：
+```bash
+python ${SKILL_DIR}/scripts/pdf_report.py \
+  --config .agent-eval/config.yaml --run <run_id>
+```
+
+Dashboard：
+```bash
+python ${SKILL_DIR}/scripts/dashboard.py \
+  --config .agent-eval/config.yaml
+```
+
+**产物**：`<run_id>.html` + `<run_id>.md` + `dashboard.html`
+
+### 阶段 7: 优化迭代
+
+**做什么**：HRPO 根因分析 → reference 注入 → A/B 验证 → accept/reject。
+
+```bash
+# 7a. HRPO 层次化根因分析
+python ${SKILL_DIR}/scripts/opik_adapter.py \
   --config .agent-eval/config.yaml --run <run_id> --optimizer hrpo
-```
 
-### 6. 生成并注入 reference
-
-```bash
-python ${CLAUDE_SKILL_DIR}/scripts/reference_optimizer.py \
+# 7b. 生成并注入 reference
+python ${SKILL_DIR}/scripts/reference_optimizer.py \
   --config .agent-eval/config.yaml --run <run_id> --apply
-```
 
-### 7. 全自动优化循环
-
-```bash
-python ${CLAUDE_SKILL_DIR}/scripts/auto_patcher.py \
+# 7c. 全自动 A/B（生成→apply→A/B→评审→accept(git commit)/reject(git checkout)）
+python ${SKILL_DIR}/scripts/auto_patcher.py \
   --config .agent-eval/config.yaml \
-  --baseline-run <baseline_run_id> \
+  --baseline-run <run_id> \
   --split regression \
   --auto-apply
 ```
 
-### 8. 生成 HTML 报告
+**产物**：reference 文件 + patch + A/B 报告 + git commit/checkout
+**文档**：`guides/13_step_optimization.md`
+
+### 阶段 8: 用例自优化 + 迭代报告
+
+**做什么**：完成一轮测试后，分析错误分布，迭代增强用例。
+
+**怎么做**：委托 `skills/test-case-self-optimization/` 子 skill。Agent 分析 F1-F8 错误分布，识别 spec 缺口和用例质量问题，生成增强建议，与人确认后更新 cases YAML。
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/html_report.py \
-  --config .agent-eval/config.yaml --run <run_id> --split train
+# Agent 读诊断结果
+python ${SKILL_DIR}/scripts/diagnoser.py \
+  --config .agent-eval/config.yaml --latest
+
+# Agent 分析错误分布，生成增强建议
+# （子 skill 指导 Agent 自己分析，不在脚本里调 LLM）
+
+# 确认后更新用例
+python ${SKILL_DIR}/scripts/case_io.py write-cases \
+  --output .agent-eval/cases/train.yaml \
+  --json '{"cases":[...]}'
 ```
 
-### 9. 生成 PDF 报告（可选）
+然后回到阶段 3 重跑评测，对比质量提升。
+
+**产物**：更新后的 cases YAML + 迭代报告
+**文档**：`docs/PRD_CASE_SELF_OPTIMIZATION.md`
+
+## CI 持续回归
 
 ```bash
-# 需要先安装 weasyprint: pip install weasyprint
-python ${CLAUDE_SKILL_DIR}/scripts/pdf_report.py \
-  --config .agent-eval/config.yaml --run <run_id> --page-size A4
-
-# 批量生成
-python ${CLAUDE_SKILL_DIR}/scripts/pdf_report.py \
-  --config .agent-eval/config.yaml --all
-```
-
-HTML 报告也内置 "导出 PDF" 按钮，可用浏览器打印直接生成 PDF（零依赖）。
-
-### 11. 生成 Dashboard
-
-```bash
-python ${CLAUDE_SKILL_DIR}/scripts/dashboard.py \
-  --config .agent-eval/config.yaml
-```
-
-### 12. 报告管理（CRUD + 检索）
-
-所有生成的报告会自动注册到 `.agent-eval/reports/index.jsonl`，并提供独立 CLI 管理历史记录。
-
-**交互式向导**（推荐）：
-```bash
-python ${CLAUDE_SKILL_DIR}/scripts/ask_setup.py \
-  --stage report --config .agent-eval/config.yaml --emit-questions
-```
-向导会询问：
-- 生成新报告 还是 管理历史报告
-- 管理操作：列出 / 按日期查看 / 搜索 / 查看内容 / 重命名 / 导出下载 / 删除 / 重建索引
-- 对应参数：目标报告、搜索关键词、日期范围、新标题、导出路径等
-
-**独立 CLI**：
-
-```bash
-# 列出报告（按日期分组）
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml list --daily
-
-# 按日期范围过滤
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml list --since 2026-07-01 --until 2026-07-12
-
-# 按 run_id / 格式 / 类型搜索
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml search --run <run_id> --format md
-
-# 查看报告内容
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml view <report_id>
-
-# 重命名报告标题
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml rename <report_id> "新标题"
-
-# 导出/下载报告
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml export <report_id> <目标路径>
-
-# 更新标签和备注
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml update <report_id> \
-  --tags baseline,demo --notes "基线评测"
-
-# 删除索引（默认同时删除文件；加 --keep-file 只删索引）
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml delete <report_id>
-
-# 根据现有文件重建索引（保留 tags/notes）
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml reindex
-
-# 按日期汇总
-python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
-  --config .agent-eval/config.yaml daily
-```
-
-### 13. CI 持续回归
-
-```bash
-python ${CLAUDE_SKILL_DIR}/scripts/ci_regression.py \
+python ${SKILL_DIR}/scripts/ci_regression.py \
   --config .agent-eval/config.yaml --ci
+
+# 标记 last_known_good
+python ${SKILL_DIR}/scripts/ci_regression.py \
+  --config .agent-eval/config.yaml --mark-good <run_id>
 ```
 
 ## 失败类型 F1-F8
@@ -253,25 +240,39 @@ python ${CLAUDE_SKILL_DIR}/scripts/ci_regression.py \
 
 ## Adapter
 
-- `mock` — 内置，无需后端
-- `spring_ai_http` — Spring AI agent HTTP 调用
-- `openlab_robot` — OpenLab Robot (cc-haha) subprocess 调用
+| 适配器 | 类型 | 说明 |
+|--------|------|------|
+| mock | 内置 | 无需后端 |
+| spring_ai_http | 内置 | Spring AI agent HTTP 调用 |
+| openlab_robot | 内置 | OpenLab Robot (cc-haha) subprocess |
+| cdp_web | 子 skill | CDP 网页执行（待实现） |
+| script | 子 skill | 脚本执行（待实现） |
+| api | 子 skill | API 执行（待实现） |
+
+用例输入适配器：YAML（case_io.py）/ Excel（excel_adapter.py）
+适配器规范：`docs/ADAPTER_SPEC.md`
 
 ## 评审 Agent（9 个，自动委托）
-
-Claude 根据 `agents/*.md` 的 description 自动委托：
 
 - 6 个规则型 Judge：domain / tool-trace / workflow / faithfulness / regression / safety
 - 3 个决策型：gatekeeper / optimizer-planner / patch-writer
 
 ## 重要规则
 
-- **默认绝不能只改 system prompt**。Prompt / tool schema / tool policy / workflow / memory / skill 要分开考虑
-- **接受规则是机械的**：train 提升 ≥0.03 + regression 零硬失败 + 零 forbidden tool + 无新失败 + latency 不超 1.5x
+- **用例生成由 Agent 完成**（通过 Task 工具），不在脚本里调 LLM
+- **脚本只做确定性工作**：YAML IO / HTTP 执行 / 断言验证 / 报告渲染
+- **默认绝不能只改 system prompt**，6 类组件分开考虑
+- **接受规则是机械的**：train 提升 ≥0.03 + regression 零硬失败 + 零 forbidden + 无新失败 + latency 不超 1.5x
 - **必须记录证据**：每条诊断引用 case_id + trace_id + event
-- **patch 越小越好**
-- **SafetyJudge veto 强制**
 
 ## 文档
 
-所有 guide 在 `guides/` 目录（15 篇）。
+| 文档 | 说明 |
+|------|------|
+| `guides/01-15` | 15 篇技术指南 |
+| `docs/DESIGN_OVERVIEW.md` | 设计总纲 |
+| `docs/PRD_TEST_DESIGN.md` | 测试设计 PRD |
+| `docs/PRD_CASE_SELF_OPTIMIZATION.md` | 用例自优化 PRD |
+| `docs/PRD_ORCHESTRATION.md` | 总流程管控 PRD |
+| `docs/ADAPTER_SPEC.md` | 适配器接口规范 |
+| `docs/RESEARCH_REPORT.md` | 业界调研报告 |
