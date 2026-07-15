@@ -42,7 +42,7 @@ mobile-bank-agent-eval/
 
 ## 执行器适配器
 通过config.yaml的adapter字段选择：mock/http/openlab_robot/cdp_web/script/api
-参见 agent-eval/docs/ADAPTER_SPEC.md
+参见 https://gitee.com/HongKongJournalist/OpenLab-Robot/blob/master/skills/https://gitee.com/HongKongJournalist/OpenLab-Robot/blob/master/skills/agent-eval/docs/ADAPTER_SPEC.md
 
 ## 用例输入适配器
 YAML（case_io.py）/ Excel（excel_adapter.py）
