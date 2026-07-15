@@ -1,47 +1,53 @@
-# Guide 01 — 工作流程
+# 工作流
 
-4 阶段流水线：需求分析 → 用例生成 → 测试执行 → 报告生成
-
-## 流程图
+## 架构关系
 
 ```
-用户需求文本
-    │
-    ▼
-阶段1: generate_requirements.py
-    │ 生成 10 维度 + 场景 → requirements.xlsx
-    ▼
-阶段2: generate_testcases.py
-    │ 为每场景生成 N 用例 → test_cases.xlsx
-    ▼
-阶段3: execute_testcases.py
-    │ 执行用例（mock/http/openlab）→ execution_results.xlsx + trace.jsonl
-    ▼
-阶段4: generate_report.py
-    │ 生成 HTML + MD 报告 → test_report.html
-    ▼
-专业报告（含调用结构 + 失败归因）
+agent-eval（主轴）           mobile-bank-agent-eval（支线）
+├── 执行（eval_runner）       ├── 用例生成（子 skill + Agent）
+├── 评分（scorer）            │   ├── requirements-analysis
+├── 诊断（diagnoser）         │   └── test-case-design
+├── 多 Judge（multi_judge）   └── YAML IO（case_io.py）
+├── 报告（html_report）
+├── reference（reference_optimizer）
+└── A/B（auto_patcher）
 ```
 
-## 一键跑通（mock 模式）
+## 完整流程
+
+### 1. 用例生成（mobile-bank-agent-eval）
+
+Agent 通过子 skill 自己生成用例：
+- `requirements-analysis`：Agent 分析需求 → 10 维度 + 场景 → YAML
+- `test-case-design`：Agent 设计用例 → agent-eval 格式 case YAML
+
+### 2. 执行（agent-eval）
 
 ```bash
-SKILL_PATH=.claude/skills/mobile-bank-agent-eval
-python $SKILL_PATH/scripts/generate_requirements.py \
-  --description "手机银行助手需求" \
-  --output $SKILL_PATH/data/requirements_analysis.xlsx
-python $SKILL_PATH/scripts/generate_testcases.py \
-  --input $SKILL_PATH/data/requirements_analysis.xlsx \
-  --output $SKILL_PATH/data/test_cases.xlsx --per-scenario 3
-python $SKILL_PATH/scripts/execute_testcases.py \
-  --input $SKILL_PATH/data/test_cases.xlsx \
-  --output $SKILL_PATH/data/execution_results.xlsx --mock
-python $SKILL_PATH/scripts/generate_report.py \
-  --requirements $SKILL_PATH/data/requirements_analysis.xlsx \
-  --testcases $SKILL_PATH/data/test_cases.xlsx \
-  --results $SKILL_PATH/data/execution_results.xlsx \
-  --trace $SKILL_PATH/data/trace.jsonl \
-  --output $SKILL_PATH/data/test_report.html
+python <agent-eval>/scripts/eval_runner.py --config .agent-eval/config.yaml --split train --variant baseline
 ```
 
-无需 API key，全流程用 mock 跑通。
+### 3. 诊断（agent-eval）
+
+```bash
+python <agent-eval>/scripts/diagnoser.py --config .agent-eval/config.yaml --latest
+```
+
+### 4. 多 Judge（agent-eval）
+
+```bash
+python <agent-eval>/scripts/multi_judge.py --config .agent-eval/config.yaml --run <run_id>
+```
+
+### 5. 报告（agent-eval）
+
+```bash
+python <agent-eval>/scripts/html_report.py --config .agent-eval/config.yaml --run <run_id>
+```
+
+### 6. reference + A/B（agent-eval）
+
+```bash
+python <agent-eval>/scripts/reference_optimizer.py --config .agent-eval/config.yaml --run <run_id> --apply
+python <agent-eval>/scripts/auto_patcher.py --config .agent-eval/config.yaml --baseline-run <run_id> --split regression --auto-apply
+```

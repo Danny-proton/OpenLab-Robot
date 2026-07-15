@@ -23,7 +23,7 @@ trace:
     reliability:  {lo: 4.5, hi: 5.0}
     adaptability: {lo: 4.2, hi: 4.8}
     convention:   {lo: 4.2, hi: 4.8}
-    effectiveness:{lo: 4.5, hi: 5.0}
+    effectiveness: {lo: 4.5, hi: 5.0}
 extra:
   trace_max_kb_per_case: 200
   accept_train_threshold: 0.03
