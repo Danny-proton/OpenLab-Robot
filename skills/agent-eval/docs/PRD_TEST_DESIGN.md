@@ -39,13 +39,22 @@
 | 长度合理 | 0.05 |
 | 断言可验证 | 0.10 |
 
-## 进度：50%
+## 进度：75%（v2.3.0-mobile-bank 架构修正后）
 
 - [x] 10维度框架
-- [x] 子skill prompt（需求分析+用例设计）
-- [x] case_io.py（YAML读写）
-- [x] excel_adapter.py（Excel→YAML）
-- [ ] spec_parser.py（PRD/SPEC解析）
-- [ ] test_method_library.yaml（方法库）
-- [ ] case_quality_checker.py（9维度检查）
-- [ ] 用例自优化闭环
+- [x] 子skill prompt（需求分析+用例设计）—— v2.3.0 prompt 从脚本移入子 skill 文字，Agent 用 Task 工具生成
+- [x] case_io.py（YAML读写）—— 由 excel_to_uatr.py 桥接器承担（Excel→YAML）
+- [x] excel_adapter.py（Excel→YAML）—— excel_to_uatr.py 实现
+- [x] 4 阶段流水线接入 eval loop —— excel_to_uatr.py 桥接到 UATR trace + cases YAML
+- [x] 脚本零 LLM —— v2.3.0 剥离 generate_requirements.py / generate_testcases.py 的 LLM 调用
+- [ ] spec_parser.py（PRD/SPEC 解析）—— 扩展点：新增 skills/spec-parser/ 子 skill + 机械脚本
+- [ ] test_method_library.yaml（方法库）—— 扩展点
+- [ ] case_quality_checker.py（9 维度检查）—— test-case-generator 子 skill 第 5 步用 Task 工具实现
+- [ ] 用例自优化闭环 —— 阶段 5-7 由主分支 diagnoser/multi_judge/auto_patcher 承担
+
+## 架构原则（v2.3.0 新增）
+
+- **脚本零 LLM**：`scripts/` 下任何脚本不得调外部 LLM API（OpenAI/DeepSeek/自建模型 URL 一律禁止）
+- **prompt 在子 skill**：生成性 prompt 全部在 `skills/*/SKILL.md` 里以文字呈现，Agent 自己读、自己生成 JSON
+- **Task 工具委派**：子 skill 指示 Agent 用 Task 工具 spawn 子 agent 生成结构化用例（场景多时并行）
+- **桥接而非重写**：4 阶段 Excel 流水线通过 `excel_to_uatr.py` 接入主分支 eval loop，不复制诊断/优化逻辑

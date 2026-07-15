@@ -1,192 +1,257 @@
 ---
 name: agent-eval
-description: "手机银行 Agent 评测与优化。基于 agent-eval 主 skill，增加手机银行定制四阶段流水线：需求分析→用例生成→用例执行→报告生成。保留原始 Excel 输入输出格式。结合 agent-eval 的 F1-F8 失败归因、HRPO 根因分析、reference 自动注入、auto_patcher 优化能力。触发词：手机银行测试, agent 评测, 用例生成, 测试执行, 测试报告, mobile bank test, agent evaluation, 需求分析, 测试用例, 自动化测试。"
+description: "Agent 评测与优化。当用户要测试、诊断、优化、A/B 验证、对比 Agent 行为、工具调用、工作流质量、业务规则合规、输出格式、skill 触发时使用。覆盖 OpenLab Robot (cc-haha) / Claude Code skill / Spring AI agent / 手机银行 HTTP agent。支持 4 阶段流水线（需求分析→用例生成→执行→报告）+ F1-F8 失败归因 + HRPO 层次化根因 + reference 自动注入 + auto_patcher 全自动优化。即使用户只提一个组件（如'工具调用错了'）也触发，因为框架把 prompt/tool schema/tool policy/workflow/memory/skill 作为独立优化目标。"
 allowed-tools: Bash(python *), Bash(python3 *), Bash(git *), Bash(ls *), Bash(cat *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(diff *), Bash(wc *), Bash(head *), Bash(tail *), Read, Write, Edit, Grep, Glob, Task, AskUserQuestion
 ---
 
-# 手机银行 Agent 评测与优化 Skill
+# Agent 评测与优化 Skill（手机银行定制版）
 
-基于 agent-eval 主 skill 的手机银行定制版本。保留原始四阶段流水线（Excel 输入输出），结合 agent-eval 的诊断/优化能力。
+你的职责是**评测并改进一个 Agent 系统**，不是只改 prompt。
 
-## 目录结构
+## 这是哪个版本
+
+本 skill 是 **agent-eval v2.3.0-mobile-bank**，在主分支 v2.1.0 基础上演进而来（**演进，不是重写**）：
+
+- ✅ **保留**主分支全部能力：9 个 judge agent、F1-F8 失败归因、HRPO 根因、reference 注入、auto_patcher、ask_setup 向导、SideCar、memory_kb、报告管理、Dashboard、CI 回归、3 个 adapter（mock/spring_ai_http/openlab_robot）
+- ➕ **新增**手机银行 4 阶段流水线：需求分析 → 用例生成 → 用例执行 → 报告生成（Excel I/O 格式）
+- 🔗 **新增**桥接器 `excel_to_uatr.py`：把 4 阶段流水线的 Excel 产出翻译成 UATR trace，**接回**主分支的 eval loop
+- 🏗️ **修正**架构：大 skill 套小 skill 套 script 的三层结构。prompt 在子 skill 里以文字呈现，Agent 用 Task 工具生成用例，脚本零 LLM 调用（不再内嵌任何外部模型 URL）
+
+## 目录结构（大 skill 套小 skill 套 script）
 
 ```
-agent-eval/
-├── SKILL.md                        ← 本文件（手机银行定制版）
-├── VERSION.md                      ← 版本信息
-├── scripts/                        ← 脚本
-│   ├── generate_requirements.py    ← 阶段1: 需求分析（原始，Excel输出）
-│   ├── generate_testcases.py       ← 阶段2: 用例生成（原始，Excel输出）
-│   ├── execute_testcases.py        ← 阶段3: 用例执行（原始，Excel输出）
-│   ├── generate_report.py          ← 阶段4: 报告生成（原始，HTML+MD输出）
-│   ├── eval_runner.py              ← agent-eval 通用执行器
-│   ├── diagnoser.py                ← F1-F8 失败归因
-│   ├── multi_judge.py              ← 多 Judge 评审
-│   ├── opik_adapter.py             ← HRPO 层次化根因
-│   ├── reference_optimizer.py      ← reference 自动注入
-│   ├── auto_patcher.py             ← 全自动优化循环
-│   ├── html_report.py              ← agent-eval HTML 报告
-│   ├── dashboard.py                ← 交互式 Dashboard
-│   ├── ci_regression.py            ← CI 持续回归
-│   ├── ...                         ← 其余通用脚本
-│   └── adapters/                   ← 执行器适配器
-├── skills/                         ← 子 skill（大skill套小skill）
-│   ├── orchestrator/               ← 编排子skill
-│   ├── requirements-analysis/      ← 需求分析子skill
-│   ├── test-case-generator/        ← 用例生成子skill
-│   ├── test-executor/              ← 用例执行子skill
-│   └── test-reporter/              ← 报告生成子skill
-├── agents/                         ← 9 个评审 agent
-├── guides/                         ← 15 篇文档
-├── docs/                           ← PRD/设计文档
-├── data/                           ← 运行产物（Excel/HTML/MD）
-└── examples/.agent-eval/           ← 示例配置
+agent-eval/                              ← 大 skill（编排 + 入口）
+├── SKILL.md                             ← 本文件
+├── VERSION.md                           ← 版本历史
+├── skills/                              ← 小 skill（每阶段一个，含 prompt 文字 + Task 工具指示）
+│   ├── orchestrator/SKILL.md            ← 编排：按序驱动 4 阶段 + 桥接 + eval loop
+│   ├── requirements-analysis/SKILL.md   ← 阶段1: 含完整需求分析 prompt + Task 工具指示
+│   ├── test-case-generator/SKILL.md     ← 阶段2: 含完整用例生成 prompt + Task 工具并行指示
+│   ├── test-executor/SKILL.md           ← 阶段3: 调 execute_testcases.py + excel_to_uatr.py 桥接
+│   └── test-reporter/SKILL.md           ← 阶段4: 调 generate_report.py + html_report.py
+├── scripts/                             ← 只做机械工作（零 LLM 调用）
+│   ├── generate_requirements.py         ← 阶段1 机械层: JSON→Excel + list + read
+│   ├── generate_testcases.py            ← 阶段2 机械层: JSON→Excel + list + read-scenarios
+│   ├── execute_testcases.py             ← 阶段3a: 纯 HTTP 执行器（读 Excel→发请求→写 Excel）
+│   ├── excel_to_uatr.py                 ← 阶段3b: 桥接器（Excel→UATR trace + cases YAML + score）
+│   ├── generate_report.py               ← 阶段4a: 4 阶段汇总报告（MD + HTML）
+│   ├── eval_runner.py                   ← 主分支: 通用执行器 + scaffold
+│   ├── diagnoser.py                     ← 主分支: F1-F8 失败归因
+│   ├── multi_judge.py                   ← 主分支: 9 Judge 评审
+│   ├── opik_adapter.py                  ← 主分支: HRPO 层次化根因
+│   ├── reference_optimizer.py           ← 主分支: reference 自动注入
+│   ├── auto_patcher.py                  ← 主分支: A/B 全自动优化
+│   ├── html_report.py / pdf_report.py   ← 主分支: 深度报告
+│   ├── dashboard.py / report_manager.py ← 主分支: Dashboard + 报告 CRUD
+│   ├── ask_setup.py / sidecar.py / memory_kb.py  ← 主分支: 向导 + 状态 + 记忆
+│   ├── ci_regression.py / abtest.py / mutator.py / scorer.py / ...  ← 主分支其余
+│   └── adapters/                        ← adapter（mock / spring_ai_http / openlab_robot）
+├── agents/                              ← 主分支 9 个评审 Agent（保留）
+├── guides/                              ← 主分支 15 篇 + 新增 guide 16
+├── docs/                                ← 主分支 + PRD_TEST_DESIGN
+├── examples/.agent-eval/                ← 主分支配置示例
+└── data/                                ← 4 阶段流水线运行产物（Excel/HTML/MD）
 ```
 
-## 完整工作流程
+## 两条数据流（本版本的核心架构）
 
-### 阶段 1: 需求分析
+### 数据流 A：手机银行 4 阶段流水线（入口，Excel I/O）
 
-**做什么**：从用户需求文本，生成 10 个测试维度和场景，输出到 Excel。
+```
+用户需求文本
+  │
+  ▼  阶段1 requirements-analysis 子 skill
+  │  （prompt 在子 skill，Agent 用 Task 工具生成 JSON，generate_requirements.py 写 Excel）
+  ▼
+requirements_analysis.xlsx
+  │
+  ▼  阶段2 test-case-generator 子 skill
+  │  （prompt 在子 skill，Agent 用 Task 工具并行生成 JSON，generate_testcases.py 写 Excel）
+  ▼
+test_cases.xlsx
+  │
+  ▼  阶段3a test-executor 子 skill
+  │  （execute_testcases.py 纯 HTTP 执行器，无 LLM）
+  ▼
+execution_results.xlsx
+  │
+  ▼  阶段3b 桥接器 excel_to_uatr.py（纯格式转换，无 LLM）
+  ▼
+UATR trace + cases YAML + runs + scores  ──→  接入数据流 B
+```
 
-**脚本**：`generate_requirements.py`（保留原始，脚本内部集成 LLM 调用）
+### 数据流 B：agent-eval eval loop（主分支原封不动的能力）
+
+```
+UATR trace + cases YAML（来自数据流 A 桥接，或 eval_runner.py 直接跑）
+  │
+  ▼  diagnoser.py          → F1-F8 失败归因
+  ▼  multi_judge.py        → 9 Judge 评审（Claude 读 agents/*.md 自行扮演或 Task 委派）
+  ▼  opik_adapter.py       → HRPO 层次化根因
+  ▼  reference_optimizer.py → reference 自动注入
+  ▼  auto_patcher.py       → A/B 全自动优化
+  ▼  html_report.py / pdf_report.py → 深度报告
+  ▼  dashboard.py          → 多轮趋势
+  ▼  ci_regression.py      → CI 持续回归
+```
+
+**两条数据流在阶段 3b 桥接器处汇合**。这是本版本相对主分支的关键演进：手机银行流水线不再孤立，而是把执行结果喂给主分支的全部诊断/优化能力。
+
+## 完整工作循环
+
+> 💬 = 需要用户交互确认 | ⚡ = 自动执行 | 📊 = 生成产物
+> 阶段编号 1-4 是手机银行流水线，5-8 是主分支 eval loop（阶段 4 报告生成在最后）
+
+1. **启动前** 💬：跑 `ask_setup.py --stage startup --emit-questions` 收集缺失信息；若无 `.agent-eval/config.yaml` 先 `eval_runner.py --scaffold .`；调 `sidecar.py --status running --step 1`
+2. **阶段 1 需求分析** 💬⚡：读 `skills/requirements-analysis/SKILL.md` → Agent 用 Task 工具生成维度/场景 JSON → `generate_requirements.py --write-stdin` 写 Excel → `sidecar.py --status completed --step 1`
+3. **阶段 2 用例生成** 💬⚡：读 `skills/test-case-generator/SKILL.md` → Agent 用 Task 工具并行生成用例 JSON → `generate_testcases.py --write-stdin` 写 Excel → `sidecar.py --status completed --step 2`
+4. **阶段 3 用例执行 + 桥接** 💬⚡：读 `skills/test-executor/SKILL.md` → `execute_testcases.py` 发 HTTP → `excel_to_uatr.py` 桥接成 UATR trace → `sidecar.py --status completed --step 3 --run-id <run_id>`
+5. **阶段 5 F1-F8 诊断** ⚡：`diagnoser.py --config .agent-eval/config.yaml --run <run_id>` → `sidecar.py --status completed --step 5`
+6. **阶段 6 多 Judge 评审** 💬⚡：`ask_setup.py --stage judge --emit-questions` 确认启用的 Judge → `multi_judge.py --config .agent-eval/config.yaml --run <run_id> --split train`
+7. **阶段 7 优化迭代** 💬⚡：`ask_setup.py --stage optimize --emit-questions` → `opik_adapter.py --optimizer hrpo` → `reference_optimizer.py --apply` → `auto_patcher.py --auto-apply`
+8. **阶段 4 报告生成** 📊：读 `skills/test-reporter/SKILL.md` → `generate_report.py`（4 阶段汇总）+ `html_report.py`（eval loop 深度）+ 可选 `pdf_report.py` / `dashboard.py`
+
+> **阶段编号说明**：报告生成编号为 4（手机银行流水线第 4 步），但实际执行在阶段 5-7 之后，因为它要汇总诊断 + Judge 结果。orchestrator 子 skill 负责这个顺序。
+
+### 交互说明
+
+每一步执行前，Claude 应先调对应 `ask_setup.py --stage <stage> --emit-questions`，把返回的 questions 用 `AskUserQuestion` 弹窗问用户。用户选择后可再跑 `ask_setup.py --stage <stage>`（不带 `--emit-questions`）持久化到 `config.yaml`。也可用 `--non-interactive` 跳过弹窗，全部默认，适合 CI/CD。
+
+### SideCar 状态面板
+
+每步开始/结束调 `scripts/sidecar.py` 输出 JSON，可据此渲染进度卡片：
 
 ```bash
-python ${SKILL_DIR}/scripts/generate_requirements.py \
-  --description "用户的需求文本" \
-  --output ${SKILL_DIR}/data/requirements_analysis.xlsx
+python scripts/sidecar.py --status running --step 2 --step-name "用例生成"
+python scripts/sidecar.py --status completed --step 2 --run-id <run_id> --score 0.723
 ```
 
-**输入**：需求描述文本（多行用 `\n` 分隔）
-**输出**：`data/requirements_analysis.xlsx`（3 个 sheet：测试维度/测试场景/Skill归属建议）
-**子 skill**：`skills/requirements-analysis/`
+### KnowledgeCycle 记忆
 
-列出维度：
-```bash
-python ${SKILL_DIR}/scripts/generate_requirements.py \
-  --list ${SKILL_DIR}/data/requirements_analysis.xlsx
-```
-
-### 阶段 2: 测试用例生成
-
-**做什么**：根据需求分析 Excel，为每个场景生成详细测试用例，输出到 Excel。
-
-**脚本**：`generate_testcases.py`（保留原始，脚本内部集成 LLM 调用）
+用户偏好和最佳实践自动写入 `.agent-eval/.memory/`：
 
 ```bash
-python ${SKILL_DIR}/scripts/generate_testcases.py \
-  --input ${SKILL_DIR}/data/requirements_analysis.xlsx \
-  --output ${SKILL_DIR}/data/test_cases.xlsx \
-  --per-scenario 3
+python scripts/memory_kb.py --remember preference --key adapter --value mobile_bank_http
+python scripts/memory_kb.py --recall preference
 ```
 
-**输入**：requirements_analysis.xlsx
-**输出**：`data/test_cases.xlsx`（用例ID/场景ID/维度ID/标题/优先级/前置条件/步骤/用户输入/预期结果/断言类型）
-**子 skill**：`skills/test-case-generator/`
+## 命令速查
 
-可选参数：`--dimensions DIM-001,DIM-002`（指定维度）、`--list`（列出维度）
+所有脚本在 `${SKILL_DIR}/scripts/` 下。`${SKILL_DIR}` 是本 skill 根目录。
 
-### 阶段 3: 测试用例执行
+### 阶段 1：需求分析（手机银行流水线）
 
-**做什么**：读取测试用例 Excel，根据环境信息执行 HTTP 请求，收集响应和指标。
+> prompt 在 `skills/requirements-analysis/SKILL.md`，Agent 用 Task 工具生成 JSON，脚本只写 Excel
 
-**脚本**：`execute_testcases.py`（保留原始）
+```bash
+# 列出维度
+python ${SKILL_DIR}/scripts/generate_requirements.py --list ${SKILL_DIR}/data/requirements_analysis.xlsx
+
+# 读回 JSON（供下游消费）
+python ${SKILL_DIR}/scripts/generate_requirements.py --read ${SKILL_DIR}/data/requirements_analysis.xlsx
+
+# 写 Excel（Agent 把生成的 JSON 通过 stdin 传入）
+cat agent_generated.json | python ${SKILL_DIR}/scripts/generate_requirements.py --write-stdin --output ${SKILL_DIR}/data/requirements_analysis.xlsx
+```
+
+### 阶段 2：测试用例生成（手机银行流水线）
+
+> prompt 在 `skills/test-case-generator/SKILL.md`，Agent 用 Task 工具并行生成 JSON，脚本只写 Excel
+
+```bash
+# 列出维度（决定生成范围）
+python ${SKILL_DIR}/scripts/generate_testcases.py --list --input ${SKILL_DIR}/data/requirements_analysis.xlsx
+
+# 读场景 JSON（喂给 Task 子 agent）
+python ${SKILL_DIR}/scripts/generate_testcases.py --read-scenarios --input ${SKILL_DIR}/data/requirements_analysis.xlsx [--dimensions DIM-001,DIM-002]
+
+# 写用例 Excel（Agent 把生成的 JSON 通过 stdin 传入）
+cat cases.json | python ${SKILL_DIR}/scripts/generate_testcases.py --write-stdin --input ${SKILL_DIR}/data/requirements_analysis.xlsx --output ${SKILL_DIR}/data/test_cases.xlsx
+```
+
+### 阶段 3a：测试用例执行（手机银行流水线，纯 HTTP）
 
 ```bash
 python ${SKILL_DIR}/scripts/execute_testcases.py \
   --input ${SKILL_DIR}/data/test_cases.xlsx \
   --output ${SKILL_DIR}/data/execution_results.xlsx \
   --base-url "http://localhost:8080/api/chat" \
-  --method POST \
-  --timeout 120 \
+  --method POST --timeout 120 \
   --headers '{"Content-Type":"application/json"}' \
   --body '{"messages":[{"role":"user","content":"{{用户输入}}"}]}'
+# 可选: --cases TC-0001,TC-0002  --stream
 ```
 
-**输入**：test_cases.xlsx + 环境信息（URL/headers/body）
-**输出**：`data/execution_results.xlsx`（用例ID/状态码/响应时间/实际响应/结果）
-**子 skill**：`skills/test-executor/`
+`{{列名}}` 会被替换为用例 Excel 中对应列的内容。
 
-支持 `--stream`（SSE 流式）、`--cases TC-0001,TC-0002`（指定用例）
-`{{列名}}` 会被替换为用例 Excel 中对应列的内容
-
-### 阶段 4: 报告生成
-
-**做什么**：读取需求分析、测试用例、执行结果三个 Excel，生成 Markdown 和 HTML 报告。
-
-**脚本**：`generate_report.py`（保留原始）
+### 阶段 3b：桥接到 eval loop（关键演进点）
 
 ```bash
+python ${SKILL_DIR}/scripts/excel_to_uatr.py \
+  --requirements ${SKILL_DIR}/data/requirements_analysis.xlsx \
+  --testcases ${SKILL_DIR}/data/test_cases.xlsx \
+  --results ${SKILL_DIR}/data/execution_results.xlsx \
+  --config .agent-eval/config.yaml \
+  --variant baseline --label "mobile-bank-$(date +%Y%m%d-%H%M%S)"
+```
+
+产出：`.agent-eval/traces/<run_id>.jsonl` + `cases/<run_id>.yaml` + `runs/<run_id>.jsonl` + `scores/<run_id>.json`
+
+### 阶段 4：报告生成（手机银行流水线汇总 + eval loop 深度）
+
+```bash
+# 4 阶段汇总报告（MD + HTML）
 python ${SKILL_DIR}/scripts/generate_report.py \
   --requirements ${SKILL_DIR}/data/requirements_analysis.xlsx \
   --testcases ${SKILL_DIR}/data/test_cases.xlsx \
   --results ${SKILL_DIR}/data/execution_results.xlsx \
-  --output ${SKILL_DIR}/data/test_report.html
+  --output ${SKILL_DIR}/data/test_report.md
+
+# eval loop 深度报告（含 F1-F8 / 9 Judge）
+python ${SKILL_DIR}/scripts/html_report.py --config .agent-eval/config.yaml --run <run_id>
+
+# 可选 PDF
+python ${SKILL_DIR}/scripts/pdf_report.py --config .agent-eval/config.yaml --run <run_id> --page-size A4
 ```
 
-**输入**：3 个 Excel
-**输出**：`data/test_report.html` + `data/test_report.md`（同时生成双格式）
-**子 skill**：`skills/test-reporter/`
-
-### 阶段 5: 诊断失败（agent-eval 能力）
-
-**做什么**：对执行结果做 F1-F8 失败归因。
+### 阶段 5-7：agent-eval eval loop（主分支原封不动）
 
 ```bash
-python ${SKILL_DIR}/scripts/diagnoser.py \
-  --config .agent-eval/config.yaml --latest
-```
+# 首次初始化（若无 .agent-eval/）
+python ${SKILL_DIR}/scripts/eval_runner.py --scaffold .
 
-**文档**：`guides/04_failure_taxonomy.md`
+# F1-F8 诊断
+python ${SKILL_DIR}/scripts/diagnoser.py --config .agent-eval/config.yaml --run <run_id>
 
-### 阶段 6: 多 Judge 评审（agent-eval 能力）
+# 9 Judge 评审
+python ${SKILL_DIR}/scripts/multi_judge.py --config .agent-eval/config.yaml --run <run_id> --split train
 
-```bash
-python ${SKILL_DIR}/scripts/multi_judge.py \
-  --config .agent-eval/config.yaml --run <run_id> --split train
-```
-
-### 阶段 7: 优化迭代（agent-eval 能力）
-
-```bash
-# HRPO 根因分析
-python ${SKILL_DIR}/scripts/opik_adapter.py \
-  --config .agent-eval/config.yaml --run <run_id> --optimizer hrpo
+# HRPO 根因
+python ${SKILL_DIR}/scripts/opik_adapter.py --config .agent-eval/config.yaml --run <run_id> --optimizer hrpo
 
 # reference 注入
-python ${SKILL_DIR}/scripts/reference_optimizer.py \
-  --config .agent-eval/config.yaml --run <run_id> --apply
+python ${SKILL_DIR}/scripts/reference_optimizer.py --config .agent-eval/config.yaml --run <run_id> --apply
 
-# 全自动 A/B
-python ${SKILL_DIR}/scripts/auto_patcher.py \
-  --config .agent-eval/config.yaml \
-  --baseline-run <run_id> --split regression --auto-apply
+# 全自动 A/B 优化
+python ${SKILL_DIR}/scripts/auto_patcher.py --config .agent-eval/config.yaml --baseline-run <run_id> --split regression --auto-apply
+
+# Dashboard
+python ${SKILL_DIR}/scripts/dashboard.py --config .agent-eval/config.yaml
+
+# CI 回归
+python ${SKILL_DIR}/scripts/ci_regression.py --config .agent-eval/config.yaml --ci
 ```
 
-### 阶段 8: 迭代报告
+### 报告管理（CRUD + 检索）
 
-回到阶段 1-2，根据 F1-F8 错误分布增强用例，重跑评测，对比质量提升。
+```bash
+python ${SKILL_DIR}/scripts/report_manager.py --config .agent-eval/config.yaml list --daily
+python ${SKILL_DIR}/scripts/report_manager.py --config .agent-eval/config.yaml search --run <run_id>
+python ${SKILL_DIR}/scripts/report_manager.py --config .agent-eval/config.yaml export <report_id> <路径>
+python ${SKILL_DIR}/scripts/report_manager.py --config .agent-eval/config.yaml delete <report_id>
+```
 
-## 子 skill 说明
-
-大 skill 套小 skill，子 skill 用文字说明让 Agent 调用对应脚本：
-
-| 子 skill | 对应阶段 | 调用脚本 |
-|---------|---------|---------|
-| orchestrator | 编排 | 按顺序调用各阶段 |
-| requirements-analysis | 阶段1 | generate_requirements.py |
-| test-case-generator | 阶段2 | generate_testcases.py |
-| test-executor | 阶段3 | execute_testcases.py |
-| test-reporter | 阶段4 | generate_report.py |
-
-## 环境变量
-
-脚本内部集成 LLM 调用，需要配置：
-- `LLM_API_KEY`: LLM API key
-- `LLM_MODEL`: 模型名（默认 gpt-4o）
-- `LLM_BASE_URL`: API 地址（默认 OpenAI）
-
-## 失败类型 F1-F8
+## 失败类型 F1-F8（主分支保留）
 
 | 代码 | 名称 | 修改对象 |
 |------|------|---------|
@@ -197,15 +262,46 @@ python ${SKILL_DIR}/scripts/auto_patcher.py \
 | F5 | Workflow 失败 | advisor 链 |
 | F6 | Memory 失败 | memory + prompt |
 | F7 | 输出失败 | prompt + memory |
-| F8 | 执行冗余失败 | reference |
+| **F8** | **执行冗余失败** | **reference（核心：缩短轮数）** |
+
+## Adapter（主分支保留 + 手机银行扩展）
+
+- `mock` — 内置，无需后端，适合 demo / CI
+- `spring_ai_http` — Spring AI agent HTTP 调用
+- `openlab_robot` — OpenLab Robot (cc-haha) subprocess 调用
+- **`mobile_bank_http`**（本版本隐式）— `execute_testcases.py` 是第 4 种 adapter，专做手机银行 HTTP agent 的批量用例执行；与 spring_ai_http 的区别：它读 Excel 用例表批量发请求、收集响应回 Excel，适合离线评测
+
+## 评审 Agent（9 个，主分支保留）
+
+Claude 根据 `agents/*.md` 的 description 自动委托（可用 Task 工具 spawn 子 agent 并行）：
+
+- 6 个规则型 Judge：domain / tool-trace / workflow / faithfulness / regression / safety
+- 3 个决策型：gatekeeper / optimizer-planner / patch-writer
+
+## 重要规则（主分支保留 + 本版本强化）
+
+- **默认绝不能只改 system prompt**。Prompt / tool schema / tool policy / workflow / memory / skill 要分开考虑
+- **接受规则是机械的**：train 提升 ≥0.03 + regression 零硬失败 + 零 forbidden tool + 无新失败 + latency 不超 1.5x
+- **必须记录证据**：每条诊断引用 case_id + trace_id + event
+- **patch 越小越好**
+- **SafetyJudge veto 强制**
+- **【本版本强化】脚本零 LLM**：`scripts/` 下任何脚本不得 `import requests` 调外部 LLM API（OpenAI / DeepSeek / 自建模型 URL 一律禁止）。所有生成性 LLM 工作由 Agent（Claude）自己完成，或用 Task 工具委派给子 agent。脚本只做 I/O、格式转换、机械计算
+- **【本版本强化】prompt 在子 skill**：4 阶段流水线的 prompt 全部在 `skills/*/SKILL.md` 里以文字呈现，不埋在脚本里
+- **【本版本强化】桥接而非重写**：mobile-bank Excel 流水线通过 `excel_to_uatr.py` 接入主分支 eval loop，不复制主分支的诊断/优化逻辑
 
 ## 文档
 
 | 文档 | 说明 |
 |------|------|
-| `guides/01-15` | 15 篇技术指南 |
+| `skills/orchestrator/SKILL.md` | 编排子 skill（单次运行内阶段衔接） |
+| `skills/requirements-analysis/SKILL.md` | 阶段 1 子 skill（含完整 prompt） |
+| `skills/test-case-generator/SKILL.md` | 阶段 2 子 skill（含完整 prompt + 并行指示） |
+| `skills/test-executor/SKILL.md` | 阶段 3 子 skill（执行 + 桥接） |
+| `skills/test-reporter/SKILL.md` | 阶段 4 子 skill（汇总 + 深度报告） |
+| `guides/01-15` | 主分支 15 篇技术指南 |
+| `guides/16_mobile_bank_pipeline.md` | 手机银行 4 阶段流水线 + 桥接指南（本版本新增） |
 | `docs/DESIGN_OVERVIEW.md` | 设计总纲 |
-| `docs/PRD_TEST_DESIGN.md` | 测试设计 PRD |
+| `docs/PRD_TEST_DESIGN.md` | 测试设计 PRD（8 阶段 + 9 维度质量检查） |
 | `docs/PRD_CASE_SELF_OPTIMIZATION.md` | 用例自优化 PRD |
 | `docs/PRD_ORCHESTRATION.md` | 总流程管控 PRD |
 | `docs/ADAPTER_SPEC.md` | 适配器接口规范 |
