@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -141,6 +142,47 @@ def build_case_metric_heatmap(score: dict) -> dict:
         row["is_hard_fail"] = pc.get("is_hard_fail", False)
         rows.append(row)
     return {"metrics": metrics_keys, "rows": rows}
+
+
+def build_trace_radar(trace_data: dict) -> dict:
+    """9. TRACE 五维雷达图数据。"""
+    if not trace_data:
+        return {"labels": [], "scores": [], "target_zones": [], "status": "no_data"}
+
+    dimensions = ["trust", "reliability", "adaptability", "convention", "effectiveness"]
+    dims = trace_data.get("dimension_averages", {})
+    if not dims:
+        # 尝试从 per_case 聚合
+        per_case = trace_data.get("per_case", [])
+        if per_case:
+            dims = {}
+            for d in dimensions:
+                vals = [pc.get("dimensions", {}).get(d, {}).get("normalized_score", 0)
+                        for pc in per_case]
+                dims[d] = round(statistics.mean(vals), 2) if vals else 0
+
+    labels = ["可信任度", "可靠性", "适用性", "规范性", "有效性"]
+    scores = [dims.get(d, 0) for d in dimensions]
+
+    # 目标区间（0-5 尺度）
+    target_zones = trace_data.get("target_zones", [
+        {"lo": 4.8, "hi": 5.0},
+        {"lo": 4.5, "hi": 5.0},
+        {"lo": 4.2, "hi": 4.8},
+        {"lo": 4.2, "hi": 4.8},
+        {"lo": 4.5, "hi": 5.0},
+    ])
+
+    status = trace_data.get("status", "unknown")
+    total = trace_data.get("trace_normalized_score", 0)
+
+    return {
+        "labels": labels,
+        "scores": scores,
+        "target_zones": target_zones,
+        "status": status,
+        "total_score": total,
+    }
 
 
 def build_failure_pareto(diagnosis: dict) -> list[dict]:
@@ -275,16 +317,35 @@ def build_charts(
         else:
             diagnosis = {"by_failure_type": {}, "diagnoses": []}
 
+    def _safe(fn, *args, **kwargs):
+        """包装单个图表构建函数，失败时返回空值而不中断整个报告。"""
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            if fn is build_case_metric_heatmap:
+                return {}
+            return []
+
+    # 尝试加载 TRACE 数据
+    trace_data = None
+    trace_path = cfg.scores_dir / f"{run_id}.trace.json"
+    if trace_path.exists():
+        try:
+            trace_data = json.loads(trace_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
     return {
         "run_id": run_id,
-        "overall_scorecard": build_overall_scorecard(score, baseline_score),
-        "scenario_bar": build_scenario_bar(score, cases),
-        "case_metric_heatmap": build_case_metric_heatmap(score),
-        "failure_pareto": build_failure_pareto(diagnosis),
-        "trace_timeline": build_trace_timeline(cfg, run_id),
-        "tool_call_graph": build_tool_call_graph(cfg, run_id),
-        "iteration_curve": build_iteration_curve(cfg, run_id),
-        "patch_impact_matrix": build_patch_impact_matrix(cfg),
+        "overall_scorecard": _safe(build_overall_scorecard, score, baseline_score),
+        "scenario_bar": _safe(build_scenario_bar, score, cases),
+        "case_metric_heatmap": _safe(build_case_metric_heatmap, score),
+        "failure_pareto": _safe(build_failure_pareto, diagnosis),
+        "trace_timeline": _safe(build_trace_timeline, cfg, run_id),
+        "tool_call_graph": _safe(build_tool_call_graph, cfg, run_id),
+        "iteration_curve": _safe(build_iteration_curve, cfg, run_id),
+        "patch_impact_matrix": _safe(build_patch_impact_matrix, cfg),
+        "trace_radar": _safe(build_trace_radar, trace_data),
     }
 
 

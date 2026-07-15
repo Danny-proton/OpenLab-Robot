@@ -1,10 +1,4 @@
-# agent-eval 全局配置
-# 这个文件由 eval_runner.py 加载，定义所有路径和权重。
-
-# 用哪个 adapter（对应 adapters/<name>.yaml；mock 是内置的）
 adapter: mock
-
-# 路径配置（相对 .agent-eval/ 目录）
 dirs:
   cases: cases
   metrics: metrics
@@ -15,21 +9,28 @@ dirs:
   scores: scores
   reports: reports
   patches: patches
-
-# 指标权重（覆盖 scorer.py 里的默认值；不写就用默认）
-# 默认:
-#   task_success: 0.35
-#   tool_correctness: 0.20
-#   business_rule_coverage: 0.20
-#   output_schema_validity: 0.15
-#   efficiency: 0.10
 weights: {}
-
-# 其它配置
+trace:
+  dimensions: [trust, reliability, adaptability, convention, effectiveness]
+  weights:
+    trust: 0.25
+    reliability: 0.20
+    adaptability: 0.15
+    convention: 0.15
+    effectiveness: 0.25
+  target_scores:
+    trust:        {lo: 4.8, hi: 5.0}
+    reliability:  {lo: 4.5, hi: 5.0}
+    adaptability: {lo: 4.2, hi: 4.8}
+    convention:   {lo: 4.2, hi: 4.8}
+    effectiveness:{lo: 4.5, hi: 5.0}
 extra:
-  # trace 单 case 最大 KB，超过则截断保留前 N 步 + 最后一步 + 所有 error
   trace_max_kb_per_case: 200
-  # A/B 接受阈值（train_score 提升至少这么多才接受）
   accept_train_threshold: 0.03
-  # latency 容忍倍数
   accept_latency_max_ratio: 1.5
+report:
+  report_format: html
+  report_sections: all
+  pdf_page_size: A4
+  pdf_include_cover: true
+  pdf_include_toc: true

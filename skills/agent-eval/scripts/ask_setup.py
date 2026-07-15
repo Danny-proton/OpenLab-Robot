@@ -101,6 +101,26 @@ ABTEST_DEFAULTS = {
     "latency_max_ratio": 1.5,
 }
 
+REPORT_DEFAULTS = {
+    "report_format": "html",     # html / pdf / md / all
+    "report_sections": "all",    # all / summary_only / custom
+    "pdf_page_size": "A4",       # A4 / Letter / Legal
+    "pdf_include_cover": True,
+    "pdf_include_toc": True,
+    # 报告管理相关
+    "report_action": "generate",  # generate / manage
+    "manage_action": "",          # list / daily / search / view / rename / export / delete / reindex
+    "target_report_id": "",
+    "search_query": "",
+    "search_run_id": "",
+    "search_format": "",
+    "date_filter": "all",         # all / today / yesterday / 7d / custom
+    "date_since": "",
+    "date_until": "",
+    "new_title": "",
+    "export_dest": "",
+}
+
 
 # ---------------------------------------------------------------------------
 # 首次启动信息收集
@@ -474,14 +494,136 @@ def emit_abtest_questions(info: dict, available_runs: list[str], available_patch
     }]
 
 
-def _get_run_score(run_id: str) -> str:
-    """读 run 的 score（简化，返回占位）。"""
-    return "?"
+# ---------------------------------------------------------------------------
+# 报告环节信息收集
+# ---------------------------------------------------------------------------
+
+def collect_report_info(cfg: C.EvalConfig | None = None) -> dict:
+    """收集报告生成/管理环节需要的信息。"""
+    info = dict(REPORT_DEFAULTS)
+    if cfg:
+        extra = cfg.extra.get("report", {})
+        info.update({k: extra.get(k, v) for k, v in info.items()})
+    return info
+
+
+def emit_report_questions(info: dict, available_runs: list[str], available_reports: list[dict]) -> list[dict]:
+    """生成报告环节的问题列表（供 AskUserQuestion 用）。"""
+    report_options = [
+        {"label": rid, "description": f"{r.get('report_type')} | {r.get('format')} | {r.get('title', '')[:40]}", "recommended": i == 0}
+        for i, (rid, r) in enumerate(available_reports[:12])
+    ] or [{"label": "（无历史报告）", "description": "请先跑评测生成报告", "recommended": True}]
+
+    questions = [{
+        "question": "你想执行哪种报告操作？",
+        "header": "报告操作",
+        "type": "single",
+        "options": [
+            {"label": "生成新报告", "description": "为某次 run 生成 HTML/PDF/Markdown 报告", "recommended": info["report_action"] == "generate"},
+            {"label": "管理历史报告", "description": "列出、搜索、查看、重命名、导出或删除已有报告", "recommended": info["report_action"] == "manage"},
+        ],
+    }]
+
+    # 生成报告子问题
+    questions.extend([{
+        "question": "报告输出格式？（仅生成新报告时）",
+        "header": "报告格式",
+        "type": "multi",
+        "options": [
+            {"label": "HTML", "description": "单文件 HTML，含交互图表（推荐）", "recommended": "html" in info["report_format"]},
+            {"label": "PDF", "description": "适合打印和邮件分享（需 weasyprint）", "recommended": "pdf" in info["report_format"]},
+            {"label": "Markdown", "description": "纯文本，适合 git 追踪", "recommended": "md" in info["report_format"]},
+        ],
+    }, {
+        "question": "PDF 页面大小？(仅生成 PDF 时)",
+        "header": "页面大小",
+        "type": "single",
+        "options": [
+            {"label": "A4", "description": "标准 A4 (210×297mm)", "recommended": info["pdf_page_size"] == "A4"},
+            {"label": "Letter", "description": "US Letter (216×279mm)", "recommended": info["pdf_page_size"] == "Letter"},
+            {"label": "Legal", "description": "US Legal (216×356mm)", "recommended": info["pdf_page_size"] == "Legal"},
+        ],
+    }, {
+        "question": "选择要生成报告的 Run？（仅生成新报告时）",
+        "header": "目标 Run",
+        "type": "single",
+        "options": [
+            {"label": rid, "description": "", "recommended": i == 0}
+            for i, rid in enumerate(available_runs[:8])
+        ] or [{"label": "（无历史 run）", "description": "请先跑评测", "recommended": True}],
+    }])
+
+    # 管理历史报告子问题
+    questions.extend([{
+        "question": "选择具体管理操作？（仅管理历史报告时）",
+        "header": "管理操作",
+        "type": "single",
+        "options": [
+            {"label": "列出所有报告", "description": "按时间倒序列出报告索引", "recommended": info["manage_action"] == "list"},
+            {"label": "按日期查看", "description": "按天汇总，看每天哪些时间、哪次运行生成了报告", "recommended": info["manage_action"] == "daily"},
+            {"label": "搜索报告", "description": "按关键词 / run_id / 格式搜索", "recommended": info["manage_action"] == "search"},
+            {"label": "查看报告内容", "description": "在终端查看报告文本内容", "recommended": info["manage_action"] == "view"},
+            {"label": "重命名报告", "description": "修改报告标题（不影响文件名）", "recommended": info["manage_action"] == "rename"},
+            {"label": "导出/下载报告", "description": "复制报告到指定路径", "recommended": info["manage_action"] == "export"},
+            {"label": "删除报告", "description": "删除索引并可同时删除文件", "recommended": info["manage_action"] == "delete"},
+            {"label": "重建索引", "description": "根据现有文件重建 reports/index.jsonl", "recommended": info["manage_action"] == "reindex"},
+        ],
+    }, {
+        "question": "选择目标报告？（查看/重命名/导出/删除时使用）",
+        "header": "目标报告",
+        "type": "single",
+        "options": report_options,
+    }, {
+        "question": "搜索关键词 / run_id / 格式？（搜索报告时使用，多个条件用空格分隔）",
+        "header": "搜索条件",
+        "type": "single",
+        "options": [
+            {"label": info.get("search_query") or "（空）", "description": "上次搜索条件", "recommended": bool(info.get("search_query"))},
+            {"label": "自定义", "description": "输入新的搜索关键词或 run_id", "recommended": not info.get("search_query")},
+        ],
+    }, {
+        "question": "日期范围？（列出/按日期查看时使用）",
+        "header": "日期范围",
+        "type": "single",
+        "options": [
+            {"label": "全部", "description": "不限制日期", "recommended": info["date_filter"] == "all"},
+            {"label": "今天", "description": "只显示今天生成的报告", "recommended": info["date_filter"] == "today"},
+            {"label": "昨天", "description": "只显示昨天生成的报告", "recommended": info["date_filter"] == "yesterday"},
+            {"label": "最近 7 天", "description": "只显示最近 7 天", "recommended": info["date_filter"] == "7d"},
+            {"label": "自定义", "description": "输入 YYYY-MM-DD 起止日期", "recommended": info["date_filter"] == "custom"},
+        ],
+    }, {
+        "question": "新的报告标题？（重命名报告时使用）",
+        "header": "新标题",
+        "type": "single",
+        "options": [
+            {"label": info.get("new_title") or "（空）", "description": "上次使用的标题", "recommended": bool(info.get("new_title"))},
+            {"label": "自定义", "description": "输入新标题", "recommended": not info.get("new_title")},
+        ],
+    }, {
+        "question": "导出目标路径？（导出/下载报告时使用）",
+        "header": "导出路径",
+        "type": "single",
+        "options": [
+            {"label": info.get("export_dest") or "./exported_report", "description": "默认导出到当前目录", "recommended": True},
+            {"label": "自定义", "description": "输入目标文件路径", "recommended": False},
+        ],
+    }])
+
+    return questions
 
 
 # ---------------------------------------------------------------------------
 # 写入 config
 # ---------------------------------------------------------------------------
+
+def _write_config_section(cfg: C.EvalConfig, section: str, data: dict) -> None:
+    """把 data 写入 config.yaml 的指定顶层段。"""
+    config_path = cfg.root / "config.yaml"
+    config = C.load_yaml(config_path) if config_path.exists() else {}
+    config[section] = {**config.get(section, {}), **data}
+    C.dump_yaml(config, config_path)
+
 
 def write_startup_config(cfg: C.EvalConfig, info: dict) -> None:
     """把收集到的信息写入 config.yaml 和 adapter yaml。"""
@@ -517,6 +659,55 @@ def write_startup_config(cfg: C.EvalConfig, info: dict) -> None:
         C.dump_yaml(adapter_cfg, adapter_path)
 
 
+def write_eval_config(cfg: C.EvalConfig, info: dict) -> None:
+    """把评测环节配置写入 config.yaml 的 eval 段。"""
+    data = {k: info[k] for k in ("split", "variant", "label", "limit") if k in info}
+    _write_config_section(cfg, "eval", data)
+
+
+def write_judge_config(cfg: C.EvalConfig, info: dict) -> None:
+    """把 Judge 配置写入 config.yaml 的 judges 段。"""
+    keys = [
+        "DomainJudge", "ToolTraceJudge", "WorkflowJudge", "FaithfulnessJudge",
+        "RegressionJudge", "SafetyJudge",
+        "OptimizerPlanner", "PatchWriter", "Gatekeeper", "ReportWriter",
+        "judge_consensus_threshold", "safety_veto_forced",
+    ]
+    data = {k: info[k] for k in keys if k in info}
+    _write_config_section(cfg, "judges", data)
+
+
+def write_optimize_config(cfg: C.EvalConfig, info: dict) -> None:
+    """把优化环节配置写入 config.yaml 的 optimize 段。"""
+    keys = [
+        "optimizer", "budget", "auto_apply_reference", "auto_apply_patch",
+        "auto_git_commit", "auto_git_rollback",
+    ]
+    data = {k: info[k] for k in keys if k in info}
+    _write_config_section(cfg, "optimize", data)
+
+
+def write_abtest_config(cfg: C.EvalConfig, info: dict) -> None:
+    """把 A/B 环节配置写入 config.yaml 的 abtest 段。"""
+    data = {k: info[k] for k in ("split", "label", "train_threshold", "latency_max_ratio") if k in info}
+    _write_config_section(cfg, "abtest", data)
+
+
+def write_report_config(cfg: C.EvalConfig, info: dict) -> None:
+    """把报告配置写入 config.yaml 的 report 段。"""
+    keys = [
+        "report_format", "report_sections", "pdf_page_size",
+        "pdf_include_cover", "pdf_include_toc",
+        # 报告管理字段
+        "report_action", "manage_action", "target_report_id",
+        "search_query", "search_run_id", "search_format",
+        "date_filter", "date_since", "date_until",
+        "new_title", "export_dest",
+    ]
+    data = {k: info[k] for k in keys if k in info}
+    _write_config_section(cfg, "report", data)
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -524,10 +715,12 @@ def write_startup_config(cfg: C.EvalConfig, info: dict) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", required=True,
-                    choices=["startup", "eval", "judge", "optimize", "abtest"])
+                    choices=["startup", "eval", "judge", "optimize", "abtest", "report"])
     ap.add_argument("--config", default=".agent-eval/config.yaml")
     ap.add_argument("--emit-questions", action="store_true",
                     help="输出待问问题 JSON（供 Claude Code 用 AskUserQuestion）")
+    ap.add_argument("--non-interactive", action="store_true",
+                    help="非交互模式：使用默认值，不写 config")
     args = ap.parse_args()
 
     cfg = None
@@ -560,6 +753,20 @@ def main() -> int:
             runs = [p.stem for p in sorted((cfg.runs_dir).glob("*.jsonl"), reverse=True)]
             patches = [p.name for p in sorted((cfg.patches_dir).glob("candidate_*.md"), reverse=True)]
         questions = emit_abtest_questions(info, runs, patches)
+    elif args.stage == "report":
+        info = collect_report_info(cfg)
+        available_runs = []
+        available_reports: list[tuple[str, dict]] = []
+        if cfg:
+            available_runs = [p.stem for p in sorted((cfg.scores_dir).glob("*.json"), reverse=True)
+                              if not p.name.endswith(".charts.json")]
+            try:
+                import report_manager as RM
+                for e in RM.list_reports(cfg):
+                    available_reports.append((e["report_id"], e))
+            except Exception:
+                pass
+        questions = emit_report_questions(info, available_runs, available_reports)
 
     if args.emit_questions:
         # 输出 JSON 供 Claude Code 读取
@@ -583,6 +790,27 @@ def main() -> int:
             for opt in q["options"]:
                 rec = " (推荐)" if opt.get("recommended") else ""
                 print(f"     - {opt['label']}{rec}: {opt['description']}")
+
+    # 非交互模式不写 config
+    if args.non_interactive or not cfg:
+        return 0
+
+    # 持久化
+    try:
+        if args.stage == "startup":
+            write_startup_config(cfg, info)
+        elif args.stage == "eval":
+            write_eval_config(cfg, info)
+        elif args.stage == "judge":
+            write_judge_config(cfg, info)
+        elif args.stage == "optimize":
+            write_optimize_config(cfg, info)
+        elif args.stage == "abtest":
+            write_abtest_config(cfg, info)
+        elif args.stage == "report":
+            write_report_config(cfg, info)
+    except Exception as e:
+        print(f"[warn] 写入 config 失败: {e}", file=sys.stderr)
 
     return 0
 

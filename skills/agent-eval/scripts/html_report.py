@@ -47,6 +47,10 @@ COLORS = {
     "bg_alt": "#f8fafc",
 }
 
+# 场景通过率阈值
+SCENARIO_PASS_THRESHOLD = 0.8
+SCENARIO_WARN_THRESHOLD = 0.5
+
 # SVG 图表配色（用于热力图、时间线等）
 HEATMAP_COLORS = ["#fee2e2", "#fecaca", "#fde68a", "#fef3c7",
                   "#d9f99d", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981"]
@@ -71,6 +75,15 @@ def _h(s) -> str:
     return html.escape(str(s) if s is not None else "")
 
 
+def _fmt_delta(delta) -> str:
+    """安全格式化 delta 值。"""
+    if delta is None:
+        return "—"
+    if delta > 0:
+        return f"+{delta:.3f}"
+    return f"{delta:.3f}"
+
+
 # ---------------------------------------------------------------------------
 # CSS
 # ---------------------------------------------------------------------------
@@ -87,10 +100,16 @@ body {
 }
 .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
 @media print {
-  body { background: white; }
+  @page { size: A4; margin: 15mm; }
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .container { max-width: 100%; padding: 0; }
   .no-print { display: none !important; }
+  .section { break-before: page; break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+  .section:first-of-type { break-before: avoid; }
+  .report-header { break-after: avoid; }
   .page-break { page-break-before: always; }
+  a { text-decoration: none; color: inherit; }
+  .report-footer { page-break-inside: avoid; }
 }
 
 /* Header */
@@ -303,10 +322,10 @@ def svg_bar_chart(data: list[dict], value_key: str, label_key: str,
         label = _h(item.get(label_key, ""))
         rows_svg.append(f"""
         <g transform="translate(0,{y})">
-          <text x="0" y="20" font-size="12" fill="{COLORS['text']}" font-family="sans-serif">{label}</text>
-          <rect x="{label_width}" y="6" width="{chart_width}" height="{row_height-12}" fill="{COLORS['neutral']}" rx="4"/>
+          <text x="0" y="20" font-size="12" fill="{COLORS["text"]}" font-family="sans-serif">{label}</text>
+          <rect x="{label_width}" y="6" width="{chart_width}" height="{row_height-12}" fill="{COLORS["neutral"]}" rx="4"/>
           <rect x="{label_width}" y="6" width="{bar_w:.1f}" height="{row_height-12}" fill="{color}" rx="4"/>
-          <text x="{label_width + bar_w + 8:.1f}" y="22" font-size="12" font-weight="600" fill="{COLORS['text']}" font-family="sans-serif">{val:.3f}</text>
+          <text x="{label_width + bar_w + 8:.1f}" y="22" font-size="12" font-weight="600" fill="{COLORS["text"]}" font-family="sans-serif">{val:.3f}</text>
         </g>""")
 
     return f"""
@@ -345,13 +364,13 @@ def svg_scorecard_bars(scorecard: list[dict]) -> str:
 
         rows.append(f"""
         <g transform="translate(0,{y})">
-          <text x="0" y="14" font-size="12" font-weight="600" fill="{COLORS['text']}" font-family="sans-serif">{label}</text>
-          <text x="0" y="32" font-size="11" fill="{COLORS['text_muted']}" font-family="sans-serif">Δ {delta_str}</text>
-          <rect x="{label_width}" y="6" width="{chart_width}" height="14" fill="{COLORS['neutral']}" rx="3"/>
-          <rect x="{label_width}" y="6" width="{b_w:.1f}" height="14" fill="{COLORS['secondary']}" rx="3" opacity="0.5"/>
-          <rect x="{label_width}" y="22" width="{chart_width}" height="14" fill="{COLORS['neutral']}" rx="3"/>
-          <rect x="{label_width}" y="22" width="{c_w:.1f}" height="14" fill="{COLORS['primary']}" rx="3"/>
-          <text x="{label_width + chart_width + 8}" y="18" font-size="11" fill="{COLORS['text_muted']}" font-family="sans-serif">base: {baseline if baseline is not None else '—'}</text>
+          <text x="0" y="14" font-size="12" font-weight="600" fill="{COLORS["text"]}" font-family="sans-serif">{label}</text>
+          <text x="0" y="32" font-size="11" fill="{COLORS["text_muted"]}" font-family="sans-serif">Δ {delta_str}</text>
+          <rect x="{label_width}" y="6" width="{chart_width}" height="14" fill="{COLORS["neutral"]}" rx="3"/>
+          <rect x="{label_width}" y="6" width="{b_w:.1f}" height="14" fill="{COLORS["secondary"]}" rx="3" opacity="0.5"/>
+          <rect x="{label_width}" y="22" width="{chart_width}" height="14" fill="{COLORS["neutral"]}" rx="3"/>
+          <rect x="{label_width}" y="22" width="{c_w:.1f}" height="14" fill="{COLORS["primary"]}" rx="3"/>
+          <text x="{label_width + chart_width + 8}" y="18" font-size="11" fill="{COLORS["text_muted"]}" font-family="sans-serif">base: {baseline if baseline is not None else '—'}</text>
           <text x="{label_width + chart_width + 8}" y="34" font-size="11" font-weight="600" fill="{delta_color}" font-family="sans-serif">cand: {candidate}</text>
         </g>""")
 
@@ -388,16 +407,16 @@ def svg_pareto(items: list[dict]) -> str:
 
         label = _h(item["failure_type"])
         bars.append(f"""
-        <rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{h:.1f}" fill="{COLORS['primary']}" rx="2"/>
-        <text x="{x + bar_w/2:.1f}" y="{y - 6:.1f}" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS['text']}" font-family="sans-serif">{item['count']}</text>
-        <text x="{x + bar_w/2:.1f}" y="{chart_h - 4}" font-size="10" text-anchor="middle" fill="{COLORS['text_muted']}" font-family="sans-serif" transform="rotate(-20 {x + bar_w/2} {chart_h - 4})">{label}</text>
+        <rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{h:.1f}" fill="{COLORS["primary"]}" rx="2"/>
+        <text x="{x + bar_w/2:.1f}" y="{y - 6:.1f}" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">{item['count']}</text>
+        <text x="{x + bar_w/2:.1f}" y="{chart_h - 4}" font-size="10" text-anchor="middle" fill="{COLORS["text_muted"]}" font-family="sans-serif" transform="rotate(-20 {x + bar_w/2} {chart_h - 4})">{label}</text>
         """)
 
     # 折线
     if len(points) >= 2:
         path = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y in points)
-        line = f'<path d="{path}" stroke="{COLORS['warning']}" stroke-width="2" fill="none" marker-end="url(#arrow)"/>'
-        dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{COLORS['warning']}"/>'
+        line = f'<path d="{path}" stroke="{COLORS["warning"]}" stroke-width="2" fill="none" marker-end="url(#arrow)"/>'
+        dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{COLORS["warning"]}"/>'
                        for x, y in points)
     else:
         line = ""
@@ -407,16 +426,16 @@ def svg_pareto(items: list[dict]) -> str:
     <svg viewBox="0 0 {chart_w + 60} {chart_h + 20}" style="width:100%;max-width:{chart_w + 60}px;">
       <defs>
         <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <polygon points="0 0, 8 4, 0 8" fill="{COLORS['warning']}"/>
+          <polygon points="0 0, 8 4, 0 8" fill="{COLORS["warning"]}"/>
         </marker>
       </defs>
-      <line x1="20" y1="{chart_h - 20}" x2="{chart_w + 20}" y2="{chart_h - 20}" stroke="{COLORS['border']}" stroke-width="1"/>
-      <line x1="20" y1="20" x2="20" y2="{chart_h - 20}" stroke="{COLORS['border']}" stroke-width="1"/>
+      <line x1="20" y1="{chart_h - 20}" x2="{chart_w + 20}" y2="{chart_h - 20}" stroke="{COLORS["border"]}" stroke-width="1"/>
+      <line x1="20" y1="20" x2="20" y2="{chart_h - 20}" stroke="{COLORS["border"]}" stroke-width="1"/>
       {"".join(bars)}
       {line}
       {dots}
-      <text x="10" y="15" font-size="10" fill="{COLORS['text_muted']}" font-family="sans-serif">数量</text>
-      <text x="{chart_w + 30}" y="15" font-size="10" fill="{COLORS['warning']}" font-family="sans-serif">累计%</text>
+      <text x="10" y="15" font-size="10" fill="{COLORS["text_muted"]}" font-family="sans-serif">数量</text>
+      <text x="{chart_w + 30}" y="15" font-size="10" fill="{COLORS["warning"]}" font-family="sans-serif">累计%</text>
     </svg>
     """
 
@@ -443,16 +462,16 @@ def svg_heatmap(heatmap_data: dict) -> str:
         return "#f87171"
 
     # 表头
-    headers = [f'<text x="{label_w + i * cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS['text']}" font-family="sans-serif">{_h(m.replace("_"," ")[:12])}</text>'
+    headers = [f'<text x="{label_w + i * cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">{_h(m.replace("_"," ")[:12])}</text>'
                for i, m in enumerate(metrics)]
-    headers.append(f'<text x="{label_w + len(metrics)*cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS['text']}" font-family="sans-serif">总分</text>')
-    headers.append(f'<text x="{label_w + (len(metrics)+1)*cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS['text']}" font-family="sans-serif">状态</text>')
+    headers.append(f'<text x="{label_w + len(metrics)*cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">总分</text>')
+    headers.append(f'<text x="{label_w + (len(metrics)+1)*cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">状态</text>')
 
     # 行
     cells = []
     for ri, row in enumerate(rows):
         y = header_h + ri * cell_h
-        cells.append(f'<text x="8" y="{y + cell_h/2 + 4}" font-size="11" fill="{COLORS['text']}" font-family="sans-serif">{_h(row["case_id"])}</text>')
+        cells.append(f'<text x="8" y="{y + cell_h/2 + 4}" font-size="11" fill="{COLORS["text"]}" font-family="sans-serif">{_h(row["case_id"])}</text>')
         for mi, m in enumerate(metrics):
             x = label_w + mi * cell_w
             v = row.get("scores", {}).get(m, 0)
@@ -656,25 +675,25 @@ def svg_iteration_curve(curve: list[dict]) -> str:
     # 折线
     if len(points) >= 2:
         path = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y, _ in points)
-        line = f'<path d="{path}" stroke="{COLORS['primary']}" stroke-width="2" fill="none"/>'
+        line = f'<path d="{path}" stroke="{COLORS["primary"]}" stroke-width="2" fill="none"/>'
     else:
         line = ""
-    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{COLORS['primary']}"/><title>{_h(c.get("run_id",""))}: {c.get("weighted_score",0)}</title>'
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{COLORS["primary"]}"/><title>{_h(c.get("run_id",""))}: {c.get("weighted_score",0)}</title>'
                    for x, y, c in points)
-    labels = "".join(f'<text x="{x:.1f}" y="{chart_h - padding + 16}" font-size="9" text-anchor="middle" fill="{COLORS['text_muted']}" font-family="sans-serif">{_h(c.get("run_id","")[-12:])}</text>'
+    labels = "".join(f'<text x="{x:.1f}" y="{chart_h - padding + 16}" font-size="9" text-anchor="middle" fill="{COLORS["text_muted"]}" font-family="sans-serif">{_h(c.get("run_id","")[-12:])}</text>'
                      for x, y, c in points)
-    values = "".join(f'<text x="{x:.1f}" y="{y - 10:.1f}" font-size="10" font-weight="600" text-anchor="middle" fill="{COLORS['text']}" font-family="sans-serif">{c.get("weighted_score",0):.2f}</text>'
+    values = "".join(f'<text x="{x:.1f}" y="{y - 10:.1f}" font-size="10" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">{c.get("weighted_score",0):.2f}</text>'
                      for x, y, c in points)
 
     return f"""
     <svg viewBox="0 0 {chart_w} {chart_h}" style="width:100%;max-width:{chart_w}px;">
-      <line x1="{padding}" y1="{chart_h - padding}" x2="{chart_w - padding}" y2="{chart_h - padding}" stroke="{COLORS['border']}"/>
-      <line x1="{padding}" y1="{padding}" x2="{padding}" y2="{chart_h - padding}" stroke="{COLORS['border']}"/>
+      <line x1="{padding}" y1="{chart_h - padding}" x2="{chart_w - padding}" y2="{chart_h - padding}" stroke="{COLORS["border"]}"/>
+      <line x1="{padding}" y1="{padding}" x2="{padding}" y2="{chart_h - padding}" stroke="{COLORS["border"]}"/>
       {line}
       {dots}
       {labels}
       {values}
-      <text x="10" y="{chart_h/2}" font-size="11" fill="{COLORS['text_muted']}" font-family="sans-serif" transform="rotate(-90 10 {chart_h/2})">加权总分</text>
+      <text x="10" y="{chart_h/2}" font-size="11" fill="{COLORS["text_muted"]}" font-family="sans-serif" transform="rotate(-90 10 {chart_h/2})">加权总分</text>
     </svg>
     """
 
@@ -708,7 +727,8 @@ def svg_tool_graph(graph: dict) -> str:
             x1, y1 = node_pos[a]
             x2, y2 = node_pos[b]
             w = max(1, e["count"])
-            edge_svg.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{COLORS['secondary']}" stroke-width="{w}" opacity="0.4"/>')
+            stroke_color = COLORS["secondary"]
+            edge_svg.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{stroke_color}" stroke-width="{w}" opacity="0.4"/>')
 
     # 节点
     node_svg = []
@@ -716,9 +736,9 @@ def svg_tool_graph(graph: dict) -> str:
         x, y = node_pos[node["id"]]
         r = 20 + (node["count"] / max_count) * 15
         node_svg.append(f"""
-        <circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{COLORS['primary']}" opacity="0.8"/>
+        <circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{COLORS["primary"]}" opacity="0.8"/>
         <text x="{x:.1f}" y="{y:.1f}" font-size="9" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif">{_h(node['id'][:8])}</text>
-        <text x="{x:.1f}" y="{y + r + 12:.1f}" font-size="10" text-anchor="middle" fill="{COLORS['text_muted']}" font-family="sans-serif">{node['count']}次</text>
+        <text x="{x:.1f}" y="{y + r + 12:.1f}" font-size="10" text-anchor="middle" fill="{COLORS["text_muted"]}" font-family="sans-serif">{node['count']}次</text>
         <title>{_h(node['id'])}: {node['count']} calls</title>
         """)
 
@@ -752,7 +772,8 @@ def section_executive_summary(score: dict, charts_data: dict, verdict: dict | No
     if baseline_score:
         b_rate = (b_agg.get("n_success", 0) / max(b_agg.get("n_cases", 1), 1)) * 100
         delta_rate = success_rate - b_rate
-        delta_str = f"较 baseline 提升 {delta_rate:+.1f} 个百分点"
+        direction = "提升" if delta_rate >= 0 else "下降"
+        delta_str = f"较 baseline {direction} {abs(delta_rate):.1f} 个百分点"
     else:
         delta_str = "（无 baseline 对比）"
 
@@ -842,7 +863,7 @@ def section_scenario_results(charts_data: dict) -> str:
     rows = "".join(
         f"<tr><td>{_h(s['scenario'])}</td><td class='num'>{s['n_cases']}</td>"
         f"<td class='num'>{s['pass_rate']*100:.1f}%</td>"
-        f"<td>{'✅' if s['pass_rate'] >= 0.8 else '⚠️' if s['pass_rate'] >= 0.5 else '❌'}</td></tr>"
+        f"<td>{'✅' if s['pass_rate'] >= SCENARIO_PASS_THRESHOLD else '⚠️' if s['pass_rate'] >= SCENARIO_WARN_THRESHOLD else '❌'}</td></tr>"
         for s in sb
     )
     return f"""
@@ -865,7 +886,7 @@ def section_metric_results(charts_data: dict) -> str:
         f"<td class='num'>{it.get('baseline') if it.get('baseline') is not None else '—'}</td>"
         f"<td class='num'>{it.get('candidate') if it.get('candidate') is not None else '—'}</td>"
         f"<td class='num' style='color:{COLORS['success'] if (it.get('delta') or 0) > 0 else COLORS['danger'] if (it.get('delta') or 0) < 0 else COLORS['text_muted']}'>"
-        f"{('+'+f'{it["delta"]:.3f}') if it.get('delta') and it['delta'] > 0 else (f'{it["delta"]:.3f}' if it.get('delta') is not None else '—')}</td></tr>"
+        + _fmt_delta(it.get('delta')) + "</td></tr>"
         for it in sc
     )
     return f"""
@@ -917,6 +938,8 @@ def section_trace_analysis(charts_data: dict) -> str:
 
 
 def section_failure_taxonomy(charts_data: dict, diagnosis: dict | None) -> str:
+    if not charts_data:
+        return '<div class="section" id="failure-taxonomy"><h2><span class="num">7</span>失败归因</h2><p class="lead">失败归因数据不可用（charts_data 为空）。</p></div>'
     pareto = charts_data.get("failure_pareto", [])
     diags = (diagnosis or {}).get("diagnoses", []) if diagnosis else []
 
@@ -982,6 +1005,163 @@ def section_trace_timeline(charts_data: dict) -> str:
       <h2><span class="num">10</span>Trace 时间线</h2>
       <p class="lead">单 case 的执行步骤序列。颜色按事件类型区分，红色表示 error。鼠标悬停查看详情。</p>
       {svg_timeline(tls)}
+    </div>
+    """
+
+
+def _trace_radar_svg(radar: dict) -> str:
+    """用纯 SVG 画五维雷达图，零外部依赖。"""
+    labels = radar.get("labels", [])
+    scores = radar.get("scores", [])
+    if not labels or not scores:
+        return '<div style="color:#64748b;padding:24px;text-align:center">暂无 TRACE 数据</div>'
+
+    n = len(labels)
+    cx, cy, R = 180, 180, 130
+    angle_step = 2 * 3.14159265 / n
+
+    # 点坐标
+    pts = []
+    for i, s in enumerate(scores):
+        angle = angle_step * i - 3.14159265 / 2
+        r = (s / 5.0) * R
+        pts.append((cx + r * math.cos(angle), cy + r * r * 0.0 + r * math.sin(angle)))
+
+    # 用简单三角函数
+    pts = []
+    for i, s in enumerate(scores):
+        angle = angle_step * i - 3.14159265 / 2
+        rr = (s / 5.0) * R
+        pts.append((cx + rr * math.cos(angle), cy + rr * math.sin(angle)))
+
+    # 网格层
+    grid_lines = ""
+    for level in [0.2, 0.4, 0.6, 0.8, 1.0]:
+        gp = []
+        for i in range(n):
+            angle = angle_step * i - 3.14159265 / 2
+            rr = R * level
+            gp.append(f"{cx + rr * math.cos(angle)},{cy + rr * math.sin(angle)}")
+        grid_lines += f'<polygon points="{" ".join(gp)}" fill="none" stroke="#e2e8f0" stroke-width="1"/>'
+
+    # 数据多边形
+    data_pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in pts)
+    data_polygon = f'<polygon points="{data_pts}" fill="rgba(37,99,235,0.15)" stroke="#2563eb" stroke-width="2.5"/>'
+
+    # 轴线 + 标签
+    axes_and_labels = ""
+    for i in range(n):
+        angle = angle_step * i - 3.14159265 / 2
+        ex = cx + R * math.cos(angle)
+        ey = cy + R * math.sin(angle)
+        axes_and_labels += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#cbd5e1" stroke-width="1"/>'
+
+        # 标签偏移
+        lx = cx + (R + 28) * math.cos(angle)
+        ly = cy + (R + 28) * math.sin(angle)
+        anchors = "middle"
+        axes_and_labels += (f'<text x="{lx:.1f}" y="{ly:.1f}" '
+                            f'text-anchor="middle" dominant-baseline="central" '
+                            f'font-size="13" fill="#0f172a" font-weight="600">{_h(labels[i])}</text>')
+
+    # 分数点
+    dots = ""
+    for i, p in enumerate(pts):
+        dots += (f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="5" fill="#2563eb" stroke="#fff" stroke-width="2"/>'
+                 f'<text x="{p[0]:.1f}" y="{p[1]:.1f - 12}" text-anchor="middle" '
+                 f'font-size="12" fill="#2563eb" font-weight="700">{scores[i]:.1f}</text>')
+
+    svg = f'''<svg viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">
+      {grid_lines}
+      {data_polygon}
+      {axes_and_labels}
+      {dots}
+      <circle cx="{cx}" cy="{cy}" r="3" fill="#64748b"/>
+    </svg>'''
+    return svg
+
+
+import math
+
+
+def section_trace_dimensions(charts_data: dict) -> str:
+    """第 12 节：TRACE 五维评测（雷达图）。"""
+    radar = charts_data.get("trace_radar", {})
+    if not radar or not radar.get("labels"):
+        return """
+    <div class="section" id="trace-dimensions">
+      <h2><span class="num">12</span>TRACE 五维评测</h2>
+      <p class="lead">五维能力雷达：Trust | Reliability | Adaptability | Convention | Effectiveness</p>
+      <div style="color:#64748b;padding:32px;text-align:center;border:1px dashed #e2e8f0;border-radius:8px">
+        <p>暂无 TRACE 数据。</p>
+        <p style="font-size:13px;margin-top:8px">请在 <code>.agent-eval/config.yaml</code> 中配置 <code>trace</code> 段后重新运行评测。</p>
+      </div>
+    </div>
+    """
+
+    total = radar.get("total_score", 0)
+    status = radar.get("status", "?")
+    labels = radar.get("labels", [])
+    scores = radar.get("scores", [])
+    target_zones = radar.get("target_zones", [])
+
+    status_colors = {"excellent": "#16a34a", "good": "#2563eb", "fair": "#d97706", "poor": "#dc2626"}
+    status_labels = {"excellent": "优秀", "good": "良好", "fair": "一般", "poor": "差"}
+    sc = status_colors.get(status, "#64748b")
+    sl = status_labels.get(status, status)
+
+    status_badge = f'<span style="background:{sc};color:#fff;padding:3px 12px;border-radius:99px;font-size:12px;font-weight:600">{sl}</span>'
+
+    # 构建详情表格行
+    rows_html = ""
+    for i, (label, score) in enumerate(zip(labels, scores)):
+        tz = target_zones[i] if i < len(target_zones) else {}
+        tz_lo = tz.get("lo", 0)
+        tz_hi = tz.get("hi", 0)
+        if score >= tz_hi:
+            st_emoji = "✅"
+            st_color = "#16a34a"
+        elif score >= tz_lo:
+            st_emoji = "⬆"
+            st_color = "#2563eb"
+        elif score >= tz_lo - 0.5:
+            st_emoji = "⚠️"
+            st_color = "#d97706"
+        else:
+            st_emoji = "❌"
+            st_color = "#dc2626"
+        rows_html += f"""<tr>
+          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-weight:600">{_h(label)}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center">
+            <span style="font-size:20px;font-weight:700;color:{st_color}">{score:.2f}</span><span style="color:#94a3b8;font-size:13px">/5.0</span>
+          </td>
+          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b">{tz_lo:.1f}–{tz_hi:.1f}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center">{st_emoji}</td>
+        </tr>"""
+
+    return f"""
+    <div class="section" id="trace-dimensions">
+      <h2><span class="num">12</span>TRACE 五维评测</h2>
+      <p class="lead">五维能力雷达：可信任度 | 可靠性 | 适用性 | 规范性 | 有效性</p>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div style="flex-shrink:0">{_trace_radar_svg(radar)}</div>
+        <div style="flex:1;min-width:300px">
+          <div style="margin-bottom:16px">
+            <span style="font-size:14px;color:#64748b">TRACE 综合评分</span>
+            <span style="font-size:28px;font-weight:700;color:{sc};margin-left:8px">{total:.2f}/5.0</span>
+            &nbsp;{status_badge}
+          </div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr>
+              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:left;color:#64748b;font-size:12px;text-transform:uppercase">维度</th>
+              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">评分</th>
+              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">目标区间</th>
+              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">状态</th>
+            </tr></thead>
+            <tbody>{rows_html}</tbody>
+          </table>
+        </div>
+      </div>
     </div>
     """
 
@@ -1075,6 +1255,7 @@ def generate_html_report(
         ("iteration", "8. 迭代历史"),
         ("case-heatmap", "9. Case 热力图"),
         ("trace-timeline", "10. Trace 时间线"),
+        ("trace-dimensions", "12. TRACE 五维评测"),
         ("recommendations", "11. 建议"),
     ]
     nav_html = '<div class="nav no-print" style="background:' + COLORS['bg'] + ';padding:12px 24px;border-radius:8px;margin-bottom:24px;border:1px solid ' + COLORS['border'] + ';position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><strong style="margin-right:16px;color:' + COLORS['text'] + '">目录:</strong>'
@@ -1110,13 +1291,14 @@ def generate_html_report(
         section_iteration_history(charts_data),
         section_case_heatmap(charts_data),
         section_trace_timeline(charts_data),
+        section_trace_dimensions(charts_data),
         section_recommendations(score, charts_data, diagnosis),
     ]
 
     footer = f"""
     <div class="report-footer">
       <p>本报告由 <strong>agent-eval v0.5</strong> 自动生成</p>
-      <p style="margin-top:4px">UATR-0.5 trace 格式 | 11 节结构化报告 | 8 类可视化图表</p>
+      <p style="margin-top:4px">UATR-0.5 trace 格式 | 12 节结构化报告（含 TRACE 五维评测）| 9 类可视化图表</p>
     </div>
     """
 
@@ -1131,6 +1313,12 @@ def generate_html_report(
 <body>
 <div class="container">
 {header}
+<div class="no-print" style="text-align:right;margin-bottom:16px;">
+  <button onclick="window.print()" style="
+    background:#2563eb;color:white;border:none;padding:10px 24px;
+    border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;
+  ">🖨️ 导出 PDF</button>
+</div>
 {nav_html}
 {"".join(sections)}
 {footer}
@@ -1141,6 +1329,11 @@ def generate_html_report(
     out = cfg.reports_dir / f"{run_id}.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html_doc, encoding="utf-8")
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, out, run_id=run_id, title=f"HTML 报告 — {run_id}")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
     return out
 
 

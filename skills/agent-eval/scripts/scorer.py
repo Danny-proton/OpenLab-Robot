@@ -388,10 +388,33 @@ def score_case(case: dict, events: list[dict], weights: dict[str, float]) -> dic
     if is_hard_fail:
         weighted -= HARD_FAIL_PENALTY
 
+    # TRACE 五维评分（如果 tracer_scorer 可用）
+    trace_scores = None
+    try:
+        from tracer_scorer import score_trace_dimensions
+        trace_scores = score_trace_dimensions(case, events, {
+            "case_id": case.get("id"),
+            "is_hard_fail": is_hard_fail,
+            "hard_fails": hard_fails,
+            "metrics": {
+                "task_success": {"score": ts_score, "misses": ts_misses},
+                "tool_correctness": {"score": tc_score, "detail": tc_detail},
+                "business_rule_coverage": {"score": br_score, "detail": br_detail},
+                "output_schema_validity": {"score": os_score, "detail": os_detail},
+                "efficiency": {"score": ef_score, "detail": ef_detail},
+                "answer_relevance": {"score": ar_score, "note": "placeholder"},
+                "evidence_faithfulness": {"score": evf_score, "note": "placeholder"},
+                "step_efficiency": {"score": sef_score, "note": "placeholder"},
+            },
+        })
+    except Exception:
+        trace_scores = None
+
     return {
         "case_id": case.get("id"),
         "is_hard_fail": is_hard_fail,
         "hard_fails": hard_fails,
+        "trace_scores": trace_scores,
         "metrics": {
             "task_success": {"score": ts_score, "misses": ts_misses},
             "tool_correctness": {"score": tc_score, "detail": tc_detail},

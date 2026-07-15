@@ -539,6 +539,8 @@ class EvalConfig:
     patches_dir: Path
     adapter_name: str
     weights: dict[str, float] = field(default_factory=dict)
+    trace_weights: dict[str, float] = field(default_factory=dict)
+    trace_target_scores: dict[str, dict] = field(default_factory=dict)
     extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -562,6 +564,8 @@ class EvalConfig:
             patches_dir=dir_of("patches", "patches"),
             adapter_name=raw.get("adapter", "mock"),
             weights=raw.get("weights", {}) or {},
+            trace_weights=raw.get("trace", {}).get("weights", {}) or {},
+            trace_target_scores=raw.get("trace", {}).get("target_scores", {}) or {},
             extra=raw.get("extra", {}) or {},
         )
 

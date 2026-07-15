@@ -39,15 +39,41 @@ agent-eval/                    ← skill 根目录
 
 ## 工作循环
 
-1. **启动前**：跑 `ask_setup.py --emit-questions` 收集缺失信息，用 AskUserQuestion 问用户
-2. **跑基线**：`python scripts/eval_runner.py --config .agent-eval/config.yaml --split train --variant baseline`
-3. **诊断**：`python scripts/diagnoser.py --config .agent-eval/config.yaml --latest`
-4. **多 Judge 评审**：`python scripts/multi_judge.py --config .agent-eval/config.yaml --run <run_id>`
-5. **HRPO 分析**：`python scripts/opik_adapter.py --config .agent-eval/config.yaml --run <run_id> --optimizer hrpo`
-6. **生成 reference**：`python scripts/reference_optimizer.py --config .agent-eval/config.yaml --run <run_id> --apply`
-7. **A/B + 全自动**：`python scripts/auto_patcher.py --config .agent-eval/config.yaml --baseline-run <run_id> --split regression --auto-apply`
-8. **生成报告**：`python scripts/html_report.py --config .agent-eval/config.yaml --run <run_id>`
-9. **生成 Dashboard**：`python scripts/dashboard.py --config .agent-eval/config.yaml`
+> 💬 = 需要用户交互确认 | ⚡ = 自动执行 | 📊 = 生成产物
+
+1. **启动前** 💬：跑 `ask_setup.py --stage startup --emit-questions` 收集缺失信息，用 AskUserQuestion 问用户；结束后调用 `sidecar.py --status completed --step 1`
+2. **跑基线** 💬⚡：先跑 `ask_setup.py --stage eval --emit-questions` 确认 split/variant/label → `python scripts/eval_runner.py ...`
+3. **诊断** ⚡：`python scripts/diagnoser.py --config .agent-eval/config.yaml --latest`；调用 `sidecar.py --status completed --step 3 --run-id <run_id>`
+4. **多 Judge 评审** 💬⚡：先跑 `ask_setup.py --stage judge --emit-questions` 确认启用的 Judge → `python scripts/multi_judge.py ...`
+5. **HRPO 分析** 💬⚡：先跑 `ask_setup.py --stage optimize --emit-questions` 确认优化器 → `python scripts/opik_adapter.py ...`
+6. **生成 reference** 💬⚡：根据 optimize 配置确认是否自动 apply → `python scripts/reference_optimizer.py ...`
+7. **A/B + 全自动** 💬⚡：先跑 `ask_setup.py --stage abtest --emit-questions` 确认 baseline/patch/threshold → `python scripts/auto_patcher.py ...`
+8. **生成报告** 💬📊：先跑 `ask_setup.py --stage report --emit-questions` 确认格式 → `python scripts/html_report.py ...`；如需 PDF 再跑 `python scripts/pdf_report.py ...`
+9. **生成 Dashboard** 📊：`python scripts/dashboard.py --config .agent-eval/config.yaml`
+
+### 交互说明
+
+每一步执行前，Claude Code 应先调用对应 `ask_setup.py --stage <stage> --emit-questions`，把返回的 `questions` 用 `AskUserQuestion` 弹窗问用户。用户选择后：
+- 如果是 startup/eval/judge/optimize/abtest/report 阶段，可再跑 `ask_setup.py --stage <stage>`（不带 `--emit-questions`）把选择持久化到 `config.yaml`。
+- 也可以用 `--non-interactive` 跳过弹窗，全部使用默认值，适合 CI/CD。
+
+### SideCar 状态面板
+
+每步开始/结束时调用 `scripts/sidecar.py` 输出 JSON，Claude Code 可据此渲染进度卡片：
+
+```bash
+python scripts/sidecar.py --status running --step 2 --step-name "跑基线"
+python scripts/sidecar.py --status completed --step 2 --run-id <run_id> --score 0.723
+```
+
+### KnowledgeCycle 记忆
+
+用户偏好和最佳实践自动写入 `.agent-eval/.memory/`：
+
+```bash
+python scripts/memory_kb.py --remember preference --key adapter --value openlab_robot
+python scripts/memory_kb.py --recall preference
+```
 
 ## 命令速查
 
@@ -60,7 +86,7 @@ agent-eval/                    ← skill 根目录
 python ${CLAUDE_SKILL_DIR}/scripts/ask_setup.py --stage startup --config .agent-eval/config.yaml --emit-questions
 ```
 
-5 个环节：startup / eval / judge / optimize / abtest，详见 `guides/15_setup_wizard.md`。
+5 个环节：startup / eval / judge / optimize / abtest / report，详见 `guides/15_setup_wizard.md`。
 
 ### 1. 首次初始化
 
@@ -125,14 +151,87 @@ python ${CLAUDE_SKILL_DIR}/scripts/html_report.py \
   --config .agent-eval/config.yaml --run <run_id> --split train
 ```
 
-### 9. 生成 Dashboard
+### 9. 生成 PDF 报告（可选）
+
+```bash
+# 需要先安装 weasyprint: pip install weasyprint
+python ${CLAUDE_SKILL_DIR}/scripts/pdf_report.py \
+  --config .agent-eval/config.yaml --run <run_id> --page-size A4
+
+# 批量生成
+python ${CLAUDE_SKILL_DIR}/scripts/pdf_report.py \
+  --config .agent-eval/config.yaml --all
+```
+
+HTML 报告也内置 "导出 PDF" 按钮，可用浏览器打印直接生成 PDF（零依赖）。
+
+### 11. 生成 Dashboard
 
 ```bash
 python ${CLAUDE_SKILL_DIR}/scripts/dashboard.py \
   --config .agent-eval/config.yaml
 ```
 
-### 10. CI 持续回归
+### 12. 报告管理（CRUD + 检索）
+
+所有生成的报告会自动注册到 `.agent-eval/reports/index.jsonl`，并提供独立 CLI 管理历史记录。
+
+**交互式向导**（推荐）：
+```bash
+python ${CLAUDE_SKILL_DIR}/scripts/ask_setup.py \
+  --stage report --config .agent-eval/config.yaml --emit-questions
+```
+向导会询问：
+- 生成新报告 还是 管理历史报告
+- 管理操作：列出 / 按日期查看 / 搜索 / 查看内容 / 重命名 / 导出下载 / 删除 / 重建索引
+- 对应参数：目标报告、搜索关键词、日期范围、新标题、导出路径等
+
+**独立 CLI**：
+
+```bash
+# 列出报告（按日期分组）
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml list --daily
+
+# 按日期范围过滤
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml list --since 2026-07-01 --until 2026-07-12
+
+# 按 run_id / 格式 / 类型搜索
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml search --run <run_id> --format md
+
+# 查看报告内容
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml view <report_id>
+
+# 重命名报告标题
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml rename <report_id> "新标题"
+
+# 导出/下载报告
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml export <report_id> <目标路径>
+
+# 更新标签和备注
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml update <report_id> \
+  --tags baseline,demo --notes "基线评测"
+
+# 删除索引（默认同时删除文件；加 --keep-file 只删索引）
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml delete <report_id>
+
+# 根据现有文件重建索引（保留 tags/notes）
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml reindex
+
+# 按日期汇总
+python ${CLAUDE_SKILL_DIR}/scripts/report_manager.py \
+  --config .agent-eval/config.yaml daily
+```
+
+### 13. CI 持续回归
 
 ```bash
 python ${CLAUDE_SKILL_DIR}/scripts/ci_regression.py \

@@ -1,3 +1,5 @@
+# Agent Eval Skill v2.1.0
+
 # Agent Eval Skill (轻量嵌套版)
 
 无 MCP server、无 hooks 的轻量版。所有能力通过 Bash 直接调 Python 脚本。

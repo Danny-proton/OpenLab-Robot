@@ -496,6 +496,11 @@ def render_diagnosis_report(cfg: C.EvalConfig, run_id: str, result: dict) -> Pat
             lines.append(f"  - event=`{ev['event']}` step={ev['step']}: {ev['reason']}")
         lines.append("")
     out.write_text("\n".join(lines), encoding="utf-8")
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, out, run_id=run_id, title=f"诊断报告 — {run_id}")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
     return out
 
 
@@ -525,7 +530,13 @@ def main() -> int:
 
     result = diagnose_run(cfg, run_id, args.split)
     # 写 json
-    C.write_json(cfg.reports_dir / f"{run_id}_diagnosis.json", result)
+    json_path = cfg.reports_dir / f"{run_id}_diagnosis.json"
+    C.write_json(json_path, result)
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, json_path, run_id=run_id, title=f"诊断数据 — {run_id}")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
     # 写 md
     out = render_diagnosis_report(cfg, run_id, result)
     print(f"[diagnoser] 诊断 {result['n_diagnoses']} 条")

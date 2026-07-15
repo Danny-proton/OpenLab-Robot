@@ -188,6 +188,15 @@ def main() -> int:
     # 写 verdict json
     verdict_path = cfg.reports_dir / f"{verdict['current_run_id']}_ci_verdict.json"
     C.write_json(verdict_path, verdict)
+    try:
+        import report_manager as RM
+        RM.register_report(
+            cfg, verdict_path,
+            run_id=verdict["current_run_id"],
+            title=f"CI 回归判定 — {verdict['current_run_id']}",
+        )
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
 
     if args.ci:
         return 0 if verdict["passed"] else 1

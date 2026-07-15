@@ -100,6 +100,11 @@ def accept_patch(cfg: C.EvalConfig, patch_id: str) -> dict:
 - note: accepted via patch_manager.py
 """
     accepted_log.write_text(existing + entry, encoding="utf-8")
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, accepted_log, title="已接受 Patch 记录")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
     return {"patch_id": patch_id, "accepted": True, "log": str(accepted_log.relative_to(cfg.root))}
 
 

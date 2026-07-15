@@ -138,7 +138,7 @@ Q: Gatekeeper 决策后自动执行什么？（多选）
 
 ### 5. A/B 环节（abtest）
 
-**触发时机**：跑 `abtest.py` 时。
+**触发时机**：跑 `abtest.py` 或 `auto_patcher.py` 时。
 
 **收集内容**：
 | 字段 | 默认值 | 说明 |
@@ -147,6 +147,18 @@ Q: Gatekeeper 决策后自动执行什么？（多选）
 | candidate_patch | 最新 | 从 patches/ 目录扫 |
 | split | regression | 验证不破坏旧能力 |
 | train_threshold | 0.03 | 提升 3% 才接受 |
+
+### 6. 报告环节（report）
+
+**触发时机**：跑 `html_report.py` / `pdf_report.py` / `dashboard.py` 时。
+
+**收集内容**：
+| 字段 | 默认值 | 说明 |
+|------|--------|------|
+| report_format | html | html / pdf / md / all |
+| pdf_page_size | A4 | A4 / Letter / Legal |
+| pdf_include_cover | true | PDF 封面页 |
+| pdf_include_toc | true | PDF 目录页 |
 
 ## Claude Code 如何调用
 
@@ -162,6 +174,7 @@ Claude Code 读到 SKILL.md 后，在用户触发 agent-eval 时：
 - startup 收集的信息 → 写入 `.agent-eval/config.yaml` + `.agent-eval/adapters/openlab_robot.yaml`
 - judge 收集的信息 → 写入 `.agent-eval/config.yaml` 的 `judges` 段
 - optimize 收集的信息 → 写入 `.agent-eval/config.yaml` 的 `optimize` 段
+- eval / abtest / report 收集的信息 → 写入 `.agent-eval/config.yaml` 的同名段
 
 下次启动时，ask_setup 优先读 config，已配置的字段不再问。
 
@@ -190,4 +203,8 @@ Claude Code 读到 SKILL.md 后，在用户触发 agent-eval 时：
 
 ## Skip 机制
 
-如果用户用 `--non-interactive` 跑，ask_setup 不问，全部用默认值。适合 CI 场景。
+如果用户用 `--non-interactive` 跑，ask_setup 不问，全部用默认值，也不写 config。适合 CI 场景。
+
+```bash
+python ask_setup.py --stage eval --config .agent-eval/config.yaml --non-interactive
+```

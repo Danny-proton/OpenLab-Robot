@@ -191,6 +191,16 @@ def main() -> int:
     sys.stdout.write("[eval_runner] 计算分数...\n")
     score = S.score_run(cfg, run_id, cases)
 
+    # TRACE 五维评测（可选：config.yaml 中未配置 trace 段则跳过）
+    sys.stdout.write("[eval_runner] 计算 TRACE 五维评分...\n")
+    try:
+        import tracer_scorer as TS
+        trace_result = TS.score_trace_run(cfg, run_id, score, cases)
+        sys.stdout.write(f"[eval_runner] TRACE 总分: {trace_result['trace_normalized_score']:.2f}/5.0 ({trace_result['status_label']})\n")
+    except Exception as e:
+        sys.stdout.write(f"[eval_runner] TRACE 评分跳过: {e}\n")
+        trace_result = None
+
     # 报告
     sys.stdout.write("[eval_runner] 生成报告...\n")
     R.render_run_report(cfg, run_id, score)
@@ -202,7 +212,13 @@ def main() -> int:
         import charts as CH
         # 诊断
         diag = D.diagnose_run(cfg, run_id, args.split)
-        C.write_json(cfg.reports_dir / f"{run_id}_diagnosis.json", diag)
+        diag_path = cfg.reports_dir / f"{run_id}_diagnosis.json"
+        C.write_json(diag_path, diag)
+        try:
+            import report_manager as RM
+            RM.register_report(cfg, diag_path, run_id=run_id, title=f"诊断数据 — {run_id}")
+        except Exception as e:
+            sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
         # charts
         charts_data = CH.build_charts(cfg, run_id, score, diag, None, cases)
         C.write_json(cfg.scores_dir / f"{run_id}.charts.json", charts_data)

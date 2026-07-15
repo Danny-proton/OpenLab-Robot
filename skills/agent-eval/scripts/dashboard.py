@@ -547,6 +547,11 @@ def generate_dashboard(cfg: C.EvalConfig) -> Path:
     out = cfg.reports_dir / "dashboard.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html_doc, encoding="utf-8")
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, out, title="交互式 Dashboard")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
     return out
 
 

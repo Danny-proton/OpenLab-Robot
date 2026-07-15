@@ -202,7 +202,13 @@ def main() -> int:
         import diagnoser as D
         # 诊断 candidate
         diag = D.diagnose_run(cfg, candidate_run_id, args.split)
-        C.write_json(cfg.reports_dir / f"{candidate_run_id}_diagnosis.json", diag)
+        diag_path = cfg.reports_dir / f"{candidate_run_id}_diagnosis.json"
+        C.write_json(diag_path, diag)
+        try:
+            import report_manager as RM
+            RM.register_report(cfg, diag_path, run_id=candidate_run_id, title=f"诊断数据 — {candidate_run_id}")
+        except Exception as e:
+            sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
         # charts（带 baseline 对比）
         cases = C.load_yaml(cfg.cases_dir / f"{args.split}.yaml").get("cases", [])
         charts_data = CH.build_charts(cfg, candidate_run_id, candidate_score, diag, baseline_score, cases)

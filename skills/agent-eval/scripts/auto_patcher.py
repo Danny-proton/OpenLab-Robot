@@ -160,7 +160,13 @@ def run_ab_with_judges(
     )
 
     # 写 judges json
-    C.write_json(cfg.reports_dir / f"{candidate_run_id}_judges.json", judges_result)
+    judges_path = cfg.reports_dir / f"{candidate_run_id}_judges.json"
+    C.write_json(judges_path, judges_result)
+    try:
+        import report_manager as RM
+        RM.register_report(cfg, judges_path, run_id=candidate_run_id, title=f"多 Judge 评审数据 — {candidate_run_id}")
+    except Exception as e:
+        sys.stderr.write(f"[report_manager] 注册失败: {e}\n")
 
     return {
         "baseline_run_id": baseline_run_id,
