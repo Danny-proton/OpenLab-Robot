@@ -1,0 +1,11 @@
+{
+  "name": "xlsx-to-markdown",
+  "version": "1.0",
+  "type": "command",
+  "command": "python",
+  "args": ["xlsx_to_markdown.py"],
+  "directory": ".",
+  "requires_python": "3.x",
+  "dependencies": ["pandas", "openpyxl"],
+  "entry_point": "__init__.py"
+}

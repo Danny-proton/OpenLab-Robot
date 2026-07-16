@@ -1,0 +1,13 @@
+{
+  "name": "webui-test-execution",
+  "version": "0.3.0",
+  "description": "基于 Chrome DevTools MCP 的 Web 自动化测试执行工具集，包含测试执行、故障自愈、记忆库管理三大核心能力",
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "chrome-devtools-mcp@1.3.0"
+      ]
+    }
+  }
+}

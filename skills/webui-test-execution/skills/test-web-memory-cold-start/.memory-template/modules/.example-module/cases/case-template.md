@@ -1,0 +1,48 @@
+---
+case_id: <BOOT-xxx 或用例编号>
+run_id: <RUN-xxx 或实际运行序号>
+datetime: <YYYY-MM-DD HH:MM:SS>
+module: <模块名>
+objects:
+  - <对象1>
+  - <对象2>
+symptom:
+  - <现象描述>
+result: <passed|failed|blocked>
+extracted_to:
+  - <modules/<module>/known_issues.md>
+  - <test-web-execution/objects/<xxx>.md>
+---
+
+# <用例标题>
+
+## 用例目标
+
+<描述用例要做什么>
+
+## 执行过程
+
+1. <步骤 1>
+2. <步骤 2>
+3. <步骤 3>
+
+## 失败现象
+
+<如果失败，描述现象>
+
+## 原因分析
+
+<失败原因>
+
+## 有效解决
+
+<最终有效的解决方案>
+
+## 可复用经验
+
+<哪些经验可以提取到共享知识>
+
+## 后续沉淀
+
+- 项目级模块问题：写入 .memory/modules/<module>/known_issues.md
+- 通用执行经验：写入 .claude/skills/test-web-execution/
