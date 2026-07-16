@@ -40,8 +40,20 @@
 1. navigate_page 访问目标 URL。
 2. take_snapshot 获取页面结构。
 3. 识别登录方式、全局导航、核心模块。
-4. 生成 TODO.md。
-5. 为 P0 任务创建 BOOT 任务。
+4. **执行登录（含验证码处理 - v1.1 更新，Issue 2）**：
+   - 从 `.memory/shared/environment.md` 读取账号、密码、`captcha_strategy`
+   - 按验证码策略执行登录：
+     - `none`：全自动 fill 用户名/密码 → click 登录
+     - `graphic`：fill 用户名/密码 → 检测验证码元素 → 通过 AskUserQuestion 暂停等待用户人工完成验证码 → click 登录
+     - `sms`：fill 用户名/密码 → click 发送验证码 → 通过 AskUserQuestion 请求用户输入收到的验证码 → fill 验证码 → click 登录
+     - `unknown`：先按 `none` 尝试，若登录后仍停留在登录页或检测到验证码元素，切换为 `graphic`/`sms` 策略
+   - 登录后验证成功（URL 跳转离开登录页 / 出现登录态元素）
+   - 详细登录流程与会话管理规则参见 `sub/skills/test-web-execution/SKILL.md` 的"登录与会话管理"章节
+5. 登录成功后 take_screenshot 记录登录态。
+6. 生成 TODO.md。
+7. 为 P0 任务创建 BOOT 任务。
+
+> **验证码铁律**：检测到验证码时**必须**通过 AskUserQuestion 暂停等待人工介入，禁止强行绕过、禁止尝试用 JS/OCR 自动识别（除非项目 memory 中明确记录了自动识别方案）。
 
 ## 阶段二：记忆采集循环
 
