@@ -1,0 +1,241 @@
+# Workflow / Advisor mutation rules
+# diagnoser 归因到 F5/F6 时查这里
+
+rules:
+  - id: F5.1_input_validation_advisor
+    target: workflow
+    target_files:
+      - src/main/java/com/example/agent/advisors/InputValidationAdvisor.java
+      - src/main/java/com/example/agent/config/AgentConfig.java
+    risk: medium
+    what: 增加 InputValidationAdvisor，在 agent_start 后校验输入完整性
+    why: |
+      F5.1 是 trace 开头没有前置检查。
+      Advisor 拦截比改 prompt 更可靠。
+    how: |
+      1. 创建 InputValidationAdvisor：
+      
+      public class InputValidationAdvisor implements BaseAdvisor {
+          @Override
+          public AdvisedRequest before(AdvisedRequest req) {
+              if (req.userText() == null || req.userText().isBlank()) {
+                  throw new AgentValidationException("user_message 不能为空");
+              }
+              // 记录 trace 事件
+              EvalTraceEmitter.emit("advisor_enter", Map.of("advisor", "InputValidation"));
+              return req;
+          }
+      }
+      
+      2. 在 AgentConfig 中挂上：
+      
+      @Bean
+      public ChatClient chatClient(ChatClient.Builder builder) {
+          return builder
+              .defaultAdvisors(new InputValidationAdvisor(), new EvalTraceAdvisor())
+              .build();
+      }
+
+  - id: F5.2_tool_result_review_advisor
+    target: workflow
+    target_files:
+      - src/main/java/com/example/agent/advisors/ToolResultReviewAdvisor.java
+    risk: medium
+    what: 在关键 tool_result 后增加校验 advisor
+    why: |
+      F5.2 是工具返回异常数据但没 advisor 拦截。
+    how: |
+      Spring AI 的 ToolCallingChatMemory 不直接支持 tool_result 后的 advisor 钩子，
+      需要用 ToolCallbackWrapper 包装：
+      
+      public class ToolResultReviewWrapper implements ToolCallback {
+          private final ToolCallback delegate;
+          
+          @Override
+          public ToolResponseResult call(ToolDefinition def, String args) {
+              ToolResponseResult result = delegate.call(def, args);
+              if (result.result() == null || result.result().isBlank()) {
+                  EvalTraceEmitter.emit("advisor_enter", Map.of(
+                      "advisor", "ToolResultReview",
+                      "reason", "empty result from " + def.name()
+                  ));
+                  throw new ToolException(def.name() + " 返回空结果，请重试或换用 fallback");
+              }
+              return result;
+          }
+      }
+
+  - id: F5.3_fallback_advisor
+    target: workflow
+    target_files:
+      - src/main/java/com/example/agent/advisors/FallbackAdvisor.java
+      - src/main/java/com/example/agent/config/ToolPolicyConfig.java
+    risk: high
+    what: 为关键工具配置 fallback 工具或降级流程
+    why: |
+      F5.3 是工具失败后直接挂，没有降级。
+      重要：这是 high risk patch，必须配合 A/B 验证。
+    how: |
+      方式 A：在 Tool Policy 配置 fallback 工具
+      
+      @Bean
+      public ToolCallbackWrapper fallbackWrapper() {
+          Map<String, String> fallbacks = Map.of(
+              "analyze_cashflow", "analyze_cashflow_simple"
+          );
+          return new FallbackToolCallbackWrapper(fallbacks);
+      }
+      
+      方式 B：增加 FallbackAdvisor，error 后切换到降级流程
+      
+      public class FallbackAdvisor implements BaseAdvisor {
+          @Override
+          public AdvisedResponse after(AdvisedResponse resp) {
+              if (resp.response().metadata().containsKey("tool_error")) {
+                  // 切换到降级 prompt
+                  return AdvisedResponse.from(resp)
+                      .withContext(Map.of("degraded_mode", true))
+                      .build();
+              }
+              return resp;
+          }
+      }
+
+  - id: F5.4_error_recovery_advisor
+    target: workflow
+    target_files:
+      - src/main/java/com/example/agent/advisors/ErrorRecoveryAdvisor.java
+    risk: medium
+    what: 增加重试策略 + error 后切换降级流程
+    why: |
+      F5.4 是 error 后整个 case 失败。
+    how: |
+      public class ErrorRecoveryAdvisor implements BaseAdvisor {
+          private static final int MAX_RETRY = 2;
+          
+          @Override
+          public AdvisedResponse after(AdvisedResponse resp) {
+              if (resp.response().hasError()) {
+                  int retryCount = (int) resp.context().getOrDefault("retry_count", 0);
+                  if (retryCount < MAX_RETRY) {
+                      // 标记重试
+                      return AdvisedResponse.from(resp)
+                          .withContext(Map.of("retry_count", retryCount + 1, "should_retry", true))
+                          .build();
+                  } else {
+                      // 切换到降级流程
+                      return AdvisedResponse.from(resp)
+                          .withContext(Map.of("degraded_mode", true))
+                          .build();
+                  }
+              }
+              return resp;
+          }
+      }
+
+  - id: F6.1_memory_trigger_in_prompt
+    target: memory
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+      - .agent-eval/agent_assets/project_memory.md
+    risk: low
+    what: 在 system prompt 增加检索触发条件；在 Memory 里增加业务模块索引
+    why: |
+      F6.1 是 agent 没有主动检索 memory。
+      显式触发条件能让 agent 知道何时该检索。
+    how: |
+      1. 在 system prompt 中加：
+      
+      ## 记忆检索触发条件
+      处理以下场景时，必须先调用 retrieve_memory：
+      - 流水异常
+      - 担保信息缺失
+      - 负债率超过阈值
+      - 申请人有历史风险记录
+      
+      2. 在 project_memory.md 中加业务模块索引：
+      
+      ## 业务模块索引
+      - 流水异常 → 检索关键词 "cashflow_volatility"
+      - 担保缺失 → 检索关键词 "missing_guarantee"
+
+  - id: F6.1_memory_index_expand
+    target: memory
+    target_files:
+      - .agent-eval/agent_assets/project_memory.md
+    risk: low
+    what: 扩展 Memory 索引，让检索有命中
+    why: |
+      F6.1 的另一种情况：检索了但 hits 为空。
+      说明 Memory 索引不全。
+    how: |
+      在 project_memory.md 中增加条目：
+      
+      ## 流水波动分析经验
+      - 近 6 个月流水波动 > 30% 时必须提示风险
+      - 流水波动 = (max-min)/mean
+      
+      ## 担保信息处理
+      - 担保信息缺失时，最终结论必须是"补充材料"
+      - 禁止给出"通过"结论
+
+  - id: F6.2_memory_usage_in_prompt
+    target: memory
+    target_files:
+      - src/main/resources/prompts/loan_risk_system.md
+    risk: low
+    what: 在 prompt 中要求"检索到的 memory_hits 必须在 final_answer 中体现"
+    why: |
+      F6.2 是检索到了但没用。
+    how: |
+      在 system prompt 中加：
+      
+      ## 记忆使用要求
+      调用 retrieve_memory 后，memory_hits 中的关键信息必须：
+      1. 出现在最终回答中（直接引用或转述）
+      2. 影响工具调用的参数选择
+      
+      禁止检索后忽略检索结果。
+
+  - id: F6.3_update_memory_reference
+    target: memory
+    target_files:
+      - .agent-eval/agent_assets/field_mappings.md
+    risk: low
+    what: 更新 Memory 里的字段映射；增加版本标记
+    why: |
+      F6.3 是用了过期 reference。
+      加版本标记，agent 检索时能识别。
+    how: |
+      在 field_mappings.md 中加：
+      
+      ## 版本
+      last_updated: 2026-07-02
+      schema_version: v2
+      
+      ## 字段映射（v2）
+      | 用户输入字段 | 工具参数字段 | 说明 |
+      |-------------|-------------|------|
+      | application_id | applicationId | 贷款申请 ID（v2 起重命名） |
+      
+      在 system prompt 中加版本校验：
+      检索到 memory 后，先检查 schema_version 是否匹配，不匹配则降级处理。
+
+  - id: F7.3_rule_to_memory
+    target: memory
+    target_files:
+      - .agent-eval/agent_assets/project_memory.md
+    risk: low
+    what: 把漏掉的业务规则加到 Memory 的业务规则索引
+    why: |
+      F7.3 是 final_answer 漏了业务规则。
+      规则加到 Memory 后，agent 检索时能拿到，输出时能体现。
+    how: |
+      在 project_memory.md 中增加：
+      
+      ## 必须遵守的业务规则
+      1. **流水波动规则**：近6个月流水波动 > 30% 时必须提示风险
+      2. **担保缺失规则**：担保信息缺失时最终结论必须是"补充材料"
+      3. **负债率规则**：负债率 > 70% 时必须提示风险
+      
+      最终回答必须显式提到上述规则的关键词。

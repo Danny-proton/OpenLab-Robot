@@ -1,0 +1,174 @@
+# Agent Eval Skill V1.1 — 用例自优化版
+
+> 业界空白能力：首次实现 test-case 自优化（改测试本身），与 prompt 自优化（改被测 Agent）正交运行。
+
+基于 agent-eval v2.3.0-mobile-bank 演进，聚焦**用例自优化**。
+
+## V1.1 核心创新
+
+完成一轮评测后，自动迭代测试用例集，使下一轮测试的覆盖度和有效率提升：
+
+```
+一轮评测 → prompt 自优化（改 Agent）→ 用例自优化（改测试）→ 重跑 → 双闭环
+```
+
+| 能力 | 说明 |
+|------|------|
+| 错误分布分析 | 从 F1-F8 诊断识别集中失败类型 |
+| Spec 缺口识别 | 维度/工具/DFX 缺口 + 过简单维度 |
+| 12 维质量评分 | 9 标准 + 3 Agent 专属（工具/工作流/记忆覆盖率） |
+| Mutation kill matrix | 6 类变异，参考 Meta ACH arXiv 2501.12862 |
+| 增强建议生成 | add/modify/deprecate/spec_changes 四类 |
+| 迭代报告 | MD + HTML，含质量分前后对比 |
+
+## 与 v2.3.0 的区别
+
+| 维度 | v2.3.0-mobile-bank | v1.1.0（本版本） |
+|------|-------------------|----------------|
+| 优化对象 | 被测 Agent（prompt/tool/workflow/reference） | **+ 测试本身（case/spec/因子）** |
+| 质量评分 | 无 | 12 维确定性评分 |
+| Mutation 测试 | 无 | 6 类变异 kill matrix |
+| 需求分析 | 6 覆盖框架 | + UC 15 字段块 + testspec 4 表 |
+| 用例自检 | 9 维 | + 20 项（16 成熟 + 4 Agent 专属） |
+| mock 系统 | 3 种失败触发 | 8 种（mock_config） |
+
+## 完整能力（保留 v2.3.0 全部 + 新增）
+
+### 保留（v2.3.0 原样）
+- 4 阶段流水线（需求分析→用例生成→执行→报告）+ Excel I/O
+- excel_to_uatr 桥接器（Excel→UATR trace + cases YAML）
+- F1-F8 失败归因 + HRPO 层次化根因
+- 9 个评审 Agent（6 规则型 + 3 决策型）
+- reference 自动注入 + auto_patcher A/B 全自动优化
+- ask_setup 向导 + SideCar + memory_kb + 报告管理 + Dashboard + CI 回归
+- 3 个 adapter（mock/spring_ai_http/openlab_robot）
+
+### V1.1 新增
+- **5 个脚本**（零 LLM）：case_io / case_quality_checker / case_optimizer / mutation_generator / case_iteration_report
+- **1 个子 skill**：test-case-self-optimization（阶段 4.5）
+- **吸收 test-design-agent-raw**：UC 15 字段 + testspec 4 表 + 16 项自检 + 7 方法库
+- **mock 系统扩展**：8 种失败触发模式
+- **6 个文档**：DELTA / PRD_REQUIREMENT_TESTDESIGN / PRD_MOCK_SYSTEM / PRD_CASE_SELF_OPTIMIZATION（重写）/ DESIGN_OVERVIEW（更新）/ guide 17
+
+## 安装
+
+```bash
+cp -r skills/agent-eval-v1.1 .claude/skills/agent-eval
+```
+
+## 快速开始（mock 端到端）
+
+```bash
+SKILL_DIR=.claude/skills/agent-eval
+
+# 1. 初始化
+python $SKILL_DIR/scripts/eval_runner.py --scaffold .
+
+# 2. 跑一轮评测（mock，8 条用例）
+python $SKILL_DIR/scripts/eval_runner.py --config .agent-eval/config.yaml --split train --variant baseline
+
+# 3. 诊断
+python $SKILL_DIR/scripts/diagnoser.py --config .agent-eval/config.yaml --latest
+
+# 4. 用例自优化（dry-run 看建议）
+python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --latest --split train
+
+# 5. 用例自优化（apply 写入 cases YAML）
+python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --latest --split train --apply --non-interactive
+
+# 6. 迭代报告
+python $SKILL_DIR/scripts/case_iteration_report.py --config .agent-eval/config.yaml --latest
+```
+
+## 命令速查
+
+### 4 阶段流水线
+```bash
+# 阶段1: 需求分析（prompt 在子 skill，Agent 用 Task 工具生成 JSON）
+python $SKILL_DIR/scripts/generate_requirements.py --list $SKILL_DIR/data/requirements_analysis.xlsx
+
+# 阶段2: 用例生成
+python $SKILL_DIR/scripts/generate_testcases.py --list --input $SKILL_DIR/data/requirements_analysis.xlsx
+
+# 阶段3a: 执行
+python $SKILL_DIR/scripts/execute_testcases.py --input $SKILL_DIR/data/test_cases.xlsx --output $SKILL_DIR/data/execution_results.xlsx --base-url http://localhost:8080/api/chat
+
+# 阶段3b: 桥接
+python $SKILL_DIR/scripts/excel_to_uatr.py --requirements $SKILL_DIR/data/requirements_analysis.xlsx --testcases $SKILL_DIR/data/test_cases.xlsx --results $SKILL_DIR/data/execution_results.xlsx --config .agent-eval/config.yaml --variant baseline
+
+# 阶段4: 报告
+python $SKILL_DIR/scripts/generate_report.py --requirements $SKILL_DIR/data/requirements_analysis.xlsx --testcases $SKILL_DIR/data/test_cases.xlsx --results $SKILL_DIR/data/execution_results.xlsx --output $SKILL_DIR/data/test_report.md
+```
+
+### eval loop（主分支）
+```bash
+python $SKILL_DIR/scripts/diagnoser.py --config .agent-eval/config.yaml --latest
+python $SKILL_DIR/scripts/multi_judge.py --config .agent-eval/config.yaml --run <run_id> --split train
+python $SKILL_DIR/scripts/reference_optimizer.py --config .agent-eval/config.yaml --run <run_id> --apply
+python $SKILL_DIR/scripts/auto_patcher.py --config .agent-eval/config.yaml --baseline-run <run_id> --split regression --auto-apply
+```
+
+### 用例自优化（V1.1 新增）
+```bash
+# 12 维质量检查
+python $SKILL_DIR/scripts/case_quality_checker.py --config .agent-eval/config.yaml --split train
+
+# 变异 kill matrix
+python $SKILL_DIR/scripts/mutation_generator.py --config .agent-eval/config.yaml --latest --split train
+
+# 用例自优化（dry-run）
+python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --latest --split train
+
+# 用例自优化（apply）
+python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --latest --split train --apply --non-interactive
+
+# 迭代报告
+python $SKILL_DIR/scripts/case_iteration_report.py --config .agent-eval/config.yaml --latest
+
+# cases 校验
+python $SKILL_DIR/scripts/case_io.py --config .agent-eval/config.yaml --split train --validate
+```
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| `SKILL.md` | 主 skill 入口 |
+| `VERSION.md` | 版本历史 |
+| `docs/DESIGN_OVERVIEW.md` | 设计总纲 |
+| `docs/DELTA_GENERAL_TO_AGENT.md` | 通用测试转 Agent 评测的新增点 |
+| `docs/PRD_REQUIREMENT_TESTDESIGN.md` | 需求分析与测试设计流程 |
+| `docs/PRD_CASE_SELF_OPTIMIZATION.md` | 用例自优化详细设计 |
+| `docs/PRD_MOCK_SYSTEM.md` | mock 系统设计 |
+| `docs/PRD_ORCHESTRATION.md` | 总流程管控 |
+| `docs/ADAPTER_SPEC.md` | 适配器接口规范 |
+| `docs/RESEARCH_REPORT.md` | 业界调研报告 |
+| `guides/01-17` | 17 篇技术指南 |
+
+## 端到端验证结果
+
+mock 系统测试（8 条用例）：
+- 诊断 14 条（F3.1/F4.4/F5.3/F6.1/F7.3/F7.4/F8.1/F8.2/F8.4）
+- 质量分：0.88 → 0.99（apply 后）
+- mutation 检出率：42%
+- 新增 9 条用例填补 spec 缺口
+
+## 架构原则
+
+1. **脚本零 LLM**：所有脚本不调外部 LLM，创造性工作由 Agent 完成
+2. **prompt 在子 skill**：生成性 prompt 在 `skills/*/SKILL.md`，不埋在脚本里
+3. **桥接而非重写**：4 阶段流水线通过 excel_to_uatr 接入 eval loop
+4. **双闭环**：prompt 自优化 + 用例自优化正交运行
+5. **向后兼容**：新增字段旧用例无也能跑
+
+## 业界对标
+
+| 来源 | 借鉴点 |
+|------|--------|
+| Meta ACH (arXiv 2501.12862) | Mutation kill matrix |
+| Opik HRPO | 根因分析迁移到用例 |
+| DeepEval Synthesizer | Golden→TestCase 分层 |
+| test-design-agent-raw | UC 15 字段 + testspec 4 表 + 16 自检 |
+| ISO 25010 / IEEE 829 | 质量标准 |
+
+**业界空白**：有 prompt 自优化，无 test-case 自优化产品化。V1.1 填补此空白。
