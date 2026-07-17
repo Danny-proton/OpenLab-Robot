@@ -126,7 +126,17 @@ score_configs:
 
 ## 6. 执行进度管理
 
-### sidecar.py 进度 JSON
+> v1.1.1 升级：进度从"瞬时 stdout"升级为"落盘 + 门户可视化"。详见 [PRD_REPORT_PORTAL.md](PRD_REPORT_PORTAL.md) §3。
+
+### 6.1 三层模型
+
+```
+生产者        存储层              消费层
+sidecar.py → progress_tracker → report_portal.py / 人工查询
+  (stdout)    (data/progress.jsonl, 落盘)   (portal.html Progress 页)
+```
+
+### 6.2 sidecar.py 进度 JSON（stdout，向后兼容）
 ```json
 {
   "status": "running",
@@ -134,14 +144,35 @@ score_configs:
   "step_name": "跑基线",
   "total_steps": 9,
   "run_id": "20260715-...",
-  "progress_pct": 33
+  "progress_pct": 33,
+  "session_id": "sess_20260715-...",
+  "duration_ms": null
 }
 ```
 
-### 进度可视化
+### 6.3 progress_tracker.py 落盘（v1.1.1 新增）
+
+sidecar `--persist`（默认开）自动调 `progress_tracker.emit`，把事件 append 到 `data/progress.jsonl`：
+
+```bash
+# 直接查询（不依赖门户）
+python progress_tracker.py --config .agent-eval/config.yaml latest      # 最近一条
+python progress_tracker.py --config .agent-eval/config.yaml timeline    # 按 session/step 聚合
+python progress_tracker.py --config .agent-eval/config.yaml summary     # 总览
+```
+
+`timeline` 输出每个 session 的 9 步状态 + duration_ms，供门户 Progress 页直接渲染阶段时间线 + 耗时条形图。
+
+### 6.4 进度可视化（三处）
+- **门户 Progress 页**（v1.1.1 新增）：进度环 + 9 步时间线 + 阶段耗时条形图 + 历史会话。★ 主入口
 - HTML 报告的"执行摘要"节
 - Dashboard 的 Overview 页
-- CI 日志的 sidecar 输出
+- CI 日志的 sidecar stdout（CI 用 `--no-persist` 关闭落盘）
+
+### 6.5 埋点插入约定
+- orchestrator 每步进入/完成调 sidecar（既有契约，不变，sidecar 自动落盘）。
+- `eval_runner.py` 每 case 完成后可选轻量埋点（`--extra '{"n_done": i}'`）。
+- `case_optimizer.py` apply 前后埋点 step 4.5。
 
 ## 7. 用例沉淀
 

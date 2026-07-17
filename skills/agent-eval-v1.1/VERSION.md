@@ -1,6 +1,62 @@
 # Agent Eval Skill 版本历史
 
-## v1.1.0 (2026-07-16) — 用例自优化版【V1.1 本次发布】
+## v1.1.1 (2026-07-17) — 报告统一管理 + 进度埋点 + 可视化重构【本次发布】
+
+在 v1.1.0 基础上完成"报告统一管理 + 执行流程进度管理 + 可视化深度优化"三件事。**不改变评测逻辑，只增强可观测性与报告呈现**。
+
+### 核心新增 1：报告统一门户（report_portal.py）
+
+一个自包含 HTML 门户，把散落在 `.agent-eval/` 各处的报告/进度/迭代/质量分聚合到**同一个网站**的 5 个页面：
+
+- **Overview** — 6 张 KPI 卡片 + run 分数 sparkline + 最近报告表
+- **Reports** — 报告卡片网格 + 客户端搜索/类型筛选/预览展开
+- **Progress** — 9 步进度环 + 水平时间线（每步 tooltip 含耗时）+ 平均耗时条形图 + session 表
+- **Iterations** — 质量分趋势 sparkline + 迭代卡片（before/after 对比）
+- **Quality** — 12 维雷达图 + 加权总分条 + 低分维度告警 + 维度详情卡
+
+**设计语言**：深色玻璃态（`backdrop-filter: blur(12px)` + slate-900 基底 + `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)` 渐变高亮）+ 鼠标悬浮动效（`translateY(-4px)` + `box-shadow: 0 12px 32px rgba(99,102,241,.25)` + 左侧色条 `::before` 渐显）。
+
+### 核心新增 2：进度埋点（progress_tracker.py + sidecar 改造）
+
+- **`progress_tracker.py`**（新）：进度事件持久化层。`emit()` 追加写 `progress.jsonl`，`timeline()` 按 session_id 聚合并计算每步 `duration_ms`，`summary()` 给出总事件数/sessions/各步平均耗时。
+- **`sidecar.py` 改造**：向后兼容。原本只 emit JSON 到 stdout，现在同时通过 `progress_tracker.emit()` 持久化。session_id 自动续接（同一次评测运行的多个 step 共享一个 session_id），无需用户改调用方式。
+
+### 核心新增 3：可视化重构（深色玻璃态 + SVG 图表 + 悬浮动效）
+
+三处报告生成器统一升级到与门户一致的设计语言：
+
+| 脚本 | 升级内容 |
+|------|---------|
+| `generate_report.py` | + 3 张 SVG 图表（维度通过率横向条形 / 优先级堆叠柱 / 响应时间分布）+ 修复 `output_path` 未定义 bug + 全量 HTML escape |
+| `case_iteration_report.py` | + 3 张 SVG 图表（质量分前后对比条形 / 错误分布 Pareto + 累计百分比 / Mutation kill 热力图）+ 复用 `PORTAL_CSS` 保证视觉一致 |
+| `report_portal.py` | 内置 SVG 工具集：进度环 / sparkline / 12 维雷达 / KPI 卡 / 时间线，全部带 `<title>` tooltip |
+
+所有图表带 `<title>` 原生 tooltip（鼠标悬浮显示数值），关键卡片带 `:hover` 升起动效。
+
+### 新增脚本（2 个，全部零 LLM）
+
+- `progress_tracker.py` — 进度事件持久化 + timeline 聚合 + summary 统计
+- `report_portal.py` — 统一门户生成器（5 页 + SVG 图表 + 客户端 JS 筛选）
+
+### 新增文档
+
+- `docs/PRD_REPORT_PORTAL.md` — 门户 + 进度埋点 PRD（含验收标准 §8）
+- `docs/PRD_ORCHESTRATION.md` 更新 — 阶段 9 生成门户 + 进度埋点章节
+
+### 端到端验证
+
+- `sidecar.py` → `progress_tracker.py` pipeline：3 个 step 事件 session_id 续接正确，timeline 正确计算 duration_ms=11000ms
+- `report_portal.py`：44KB 门户 HTML，5 页全部有数据（8 报告 / 1 session / 1 迭代 / 12 维质量分）
+- `generate_report.py`：31KB HTML，3 张 SVG 图表 + 9 tooltip + 8 hover 规则，`output_path` bug 已修复
+- `case_iteration_report.py`：41KB HTML，3 张 SVG 图表 + 51 tooltip，深色玻璃态与门户一致
+
+### 设计原则强化
+
+- **统一设计语言**：门户/4阶段报告/迭代报告共享同一套深色玻璃态 CSS（`PORTAL_CSS` 常量复用）
+- **进度可观测**：9 步评测流程每步都有 running/completed/failed 状态持久化，门户实时聚合
+- **零外部依赖**：所有 SVG 图表手写，无 Chart.js / D3，单 HTML 文件可邮件分享
+
+## v1.1.0 (2026-07-16) — 用例自优化版
 
 **业界空白能力**。在 v2.3.0-mobile-bank 基础上演进，聚焦**用例自优化**（test-case self-optimization）。
 业界只有 prompt 自优化（改被测 Agent），本版本首次实现 test-case 自优化（改测试本身）。

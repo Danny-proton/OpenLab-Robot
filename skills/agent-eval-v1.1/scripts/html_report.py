@@ -1068,7 +1068,7 @@ def _trace_radar_svg(radar: dict) -> str:
     dots = ""
     for i, p in enumerate(pts):
         dots += (f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="5" fill="#2563eb" stroke="#fff" stroke-width="2"/>'
-                 f'<text x="{p[0]:.1f}" y="{p[1]:.1f - 12}" text-anchor="middle" '
+                 f'<text x="{p[0]:.1f}" y="{p[1] - 12:.1f}" text-anchor="middle" '
                  f'font-size="12" fill="#2563eb" font-weight="700">{scores[i]:.1f}</text>')
 
     svg = f'''<svg viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">

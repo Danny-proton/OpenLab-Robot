@@ -4,6 +4,8 @@
 
 基于 agent-eval v2.3.0-mobile-bank 演进，聚焦**用例自优化**。
 
+**v1.1.1（本次）**：在 v1.1.0 基础上完成"报告统一管理 + 执行流程进度管理 + 可视化深度优化"三件事。
+
 ## V1.1 核心创新
 
 完成一轮评测后，自动迭代测试用例集，使下一轮测试的覆盖度和有效率提升：
@@ -20,6 +22,9 @@
 | Mutation kill matrix | 6 类变异，参考 Meta ACH arXiv 2501.12862 |
 | 增强建议生成 | add/modify/deprecate/spec_changes 四类 |
 | 迭代报告 | MD + HTML，含质量分前后对比 |
+| **【v1.1.1】报告统一门户** | 单 HTML 聚合 5 页：Overview/Reports/Progress/Iterations/Quality |
+| **【v1.1.1】进度埋点** | sidecar 持久化到 progress.jsonl，门户实时聚合 9 步时间线 |
+| **【v1.1.1】深色玻璃态可视化** | 3 处报告统一升级：渐变高亮 + 悬浮升起 + SVG 图表 + tooltip |
 
 ## 与 v2.3.0 的区别
 
@@ -50,6 +55,14 @@
 - **mock 系统扩展**：8 种失败触发模式
 - **6 个文档**：DELTA / PRD_REQUIREMENT_TESTDESIGN / PRD_MOCK_SYSTEM / PRD_CASE_SELF_OPTIMIZATION（重写）/ DESIGN_OVERVIEW（更新）/ guide 17
 
+### v1.1.1 新增（报告统一管理 + 进度埋点 + 可视化重构）
+- **2 个脚本**（零 LLM）：`progress_tracker.py`（进度事件持久化）/ `report_portal.py`（5 页统一门户）
+- **sidecar.py 改造**：向后兼容，emit JSON 到 stdout 同时持久化到 progress.jsonl，session_id 自动续接
+- **3 处报告可视化重构**：generate_report / case_iteration_report / report_portal 统一深色玻璃态设计语言
+- **SVG 图表**：进度环 / sparkline / 12 维雷达 / 维度通过率条形 / 优先级堆叠柱 / 响应时间分布 / Pareto / Mutation 热力图，全部带原生 tooltip
+- **1 个 PRD**：`docs/PRD_REPORT_PORTAL.md`（含验收标准 §8）
+- **修复**：generate_report.py 的 `output_path` 未定义 bug
+
 ## 安装
 
 ```bash
@@ -78,6 +91,23 @@ python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --l
 
 # 6. 迭代报告
 python $SKILL_DIR/scripts/case_iteration_report.py --config .agent-eval/config.yaml --latest
+
+# 7. 生成统一门户（v1.1.1，聚合报告/进度/迭代/质量分到同一网站）
+python $SKILL_DIR/scripts/report_portal.py --config .agent-eval/config.yaml
+# 产出 .agent-eval/reports/portal.html，浏览器打开即可
+```
+
+### 进度埋点（v1.1.1）
+
+sidecar 每步自动持久化到 `.agent-eval/data/progress.jsonl`，无需额外配置：
+
+```bash
+python $SKILL_DIR/scripts/sidecar.py --status running --step 1 --step-name "需求分析"
+python $SKILL_DIR/scripts/sidecar.py --status completed --step 1
+
+# 查看进度时间线
+python $SKILL_DIR/scripts/progress_tracker.py --config .agent-eval/config.yaml timeline
+python $SKILL_DIR/scripts/progress_tracker.py --config .agent-eval/config.yaml summary
 ```
 
 ## 命令速查
@@ -140,10 +170,11 @@ python $SKILL_DIR/scripts/case_io.py --config .agent-eval/config.yaml --split tr
 | `docs/PRD_REQUIREMENT_TESTDESIGN.md` | 需求分析与测试设计流程 |
 | `docs/PRD_CASE_SELF_OPTIMIZATION.md` | 用例自优化详细设计 |
 | `docs/PRD_MOCK_SYSTEM.md` | mock 系统设计 |
+| `docs/PRD_REPORT_PORTAL.md` | 【v1.1.1】报告门户 + 进度埋点 PRD（含验收标准） |
 | `docs/PRD_ORCHESTRATION.md` | 总流程管控 |
 | `docs/ADAPTER_SPEC.md` | 适配器接口规范 |
 | `docs/RESEARCH_REPORT.md` | 业界调研报告 |
-| `guides/01-17` | 17 篇技术指南 |
+| `guides/01-17` | 17 篇技术指南（guide 11 含门户章节） |
 
 ## 端到端验证结果
 
@@ -152,6 +183,12 @@ mock 系统测试（8 条用例）：
 - 质量分：0.88 → 0.99（apply 后）
 - mutation 检出率：42%
 - 新增 9 条用例填补 spec 缺口
+
+v1.1.1 验证：
+- sidecar → progress_tracker pipeline：3 个 step 事件 session_id 续接正确，timeline 正确计算 duration_ms
+- report_portal.py：44KB 门户 HTML，5 页全部有数据（8 报告 / 1 session / 1 迭代 / 12 维质量分）
+- generate_report.py：31KB HTML，3 张 SVG 图表 + 9 tooltip + 8 hover 规则
+- case_iteration_report.py：41KB HTML，3 张 SVG 图表 + 51 tooltip，深色玻璃态与门户一致
 
 ## 架构原则
 

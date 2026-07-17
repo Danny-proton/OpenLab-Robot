@@ -62,8 +62,18 @@ allowed-tools: Bash(python *), Bash(python3 *), Read, Write, Edit, Task, AskUser
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  阶段 9: report-portal【v1.1.1 新增】                            │
+│    report_portal.py    ──→ 统一门户 portal.html                  │
+│    （聚合 4/4.5/5-7 全部产物 + progress 时间线 + 质量分雷达）     │
+│    （深色玻璃态 + 悬浮动效 + SVG 图表，单 HTML 可邮件分享）       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
         用户决定：迭代增强（回阶段 1-2）还是收工
 ```
+
+> **进度埋点（v1.1.1）**：阶段 1-9 每步开始/结束都调 `sidecar.py`，事件自动持久化到 `.agent-eval/data/progress.jsonl`，被门户 Progress 页聚合为 9 步水平时间线 + 每步耗时 tooltip。无需额外配置。
 
 ## 编排职责
 
@@ -102,6 +112,7 @@ python ${SKILL_PATH}/scripts/eval_runner.py --scaffold .
 | 6 | `.agent-eval/scores/<run_id>_judges.json` | 文件存在 |
 | 7 | `.agent-eval/patches/candidate_*.md` | 若有 patch 则存在 |
 | 4 | `data/test_report.html` + `.agent-eval/reports/<run_id>.html` | 两份都存在 |
+| 9 | `.agent-eval/reports/portal.html` | v1.1.1，文件存在且 >10KB |
 
 校验失败则停在该阶段，向用户报告原因，询问是否重试或跳过。
 
@@ -111,6 +122,16 @@ python ${SKILL_PATH}/scripts/eval_runner.py --scaffold .
 - **迭代增强**：基于错误分布回到阶段 1-2，补充用例覆盖失败维度，重跑阶段 3-7
 - **接受现状**：归档报告，结束本轮
 - **自动优化**：若阶段 7 产出了 candidate patch，调 `auto_patcher.py --auto-apply` 自动应用并 A/B
+
+无论哪种决策，收尾时都应生成统一门户（阶段 9）：
+
+```bash
+python ${SKILL_PATH}/scripts/sidecar.py --status running --step 9 --step-name "生成统一门户"
+python ${SKILL_PATH}/scripts/report_portal.py --config .agent-eval/config.yaml
+python ${SKILL_PATH}/scripts/sidecar.py --status completed --step 9
+```
+
+门户聚合本轮所有报告 + 进度时间线 + 迭代记录 + 12 维质量分，单 HTML 文件可邮件分享或归档。
 
 ### 5. 记忆沉淀
 
