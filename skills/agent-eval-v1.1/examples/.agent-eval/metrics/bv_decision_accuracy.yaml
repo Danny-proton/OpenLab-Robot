@@ -1,0 +1,20 @@
+name: bv_decision_accuracy
+display_name: 业务决策准确率
+version: 1
+description: Agent 输出与 Ground Truth 的业务决策一致性（人工标注判定）
+dimension: business_value
+weight: 0.10
+type: manual
+source: annotation
+source_filter:
+  fields: ["quality_labels.bv_decision_accuracy"]
+aggregate: "avg(quality_labels.bv_decision_accuracy) / 5.0"
+components:
+  - name: decision_match
+    formula: "ground_truth.decision == agent_decision"
+    source: annotation
+    description: Agent 给出的业务决策是否与 Ground Truth 一致
+hard_fail: false
+note: |
+  需要人工标注 Ground Truth（ground_truth.decision）和评分（quality_labels.bv_decision_accuracy）。
+  此指标映射自现有 task_success，作为自动化基线，人工标注校准。

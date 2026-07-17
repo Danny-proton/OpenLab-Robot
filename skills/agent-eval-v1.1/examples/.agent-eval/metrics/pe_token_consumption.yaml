@@ -1,0 +1,21 @@
+name: pe_token_consumption
+display_name: Token 消耗量
+version: 1
+description: 每次评测的总 Token 数（input + output）
+dimension: process_efficiency
+weight: 0.05
+type: auto
+source: span
+source_filter:
+  fields: ["tokens_input", "tokens_output"]
+aggregate: "sum(tokens_input) + sum(tokens_output)"
+components:
+  - name: total_token_count
+    formula: "sum(span.tokens_input) + sum(span.tokens_output)"
+    source: span
+    description: 从 Span 数据聚合所有 LLM 调用的 Token 消耗
+hard_fail: false
+note: |
+  数据来源是 Span（不是 trace）。
+  每次 LLM 调用都记录 tokens_input 和 tokens_output。
+  缺失 Token 数据的 Span 标记为 cost_status: "incomplete"。

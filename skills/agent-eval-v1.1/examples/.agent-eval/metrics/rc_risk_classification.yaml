@@ -1,0 +1,20 @@
+name: rc_risk_classification
+display_name: 风险等级判定准确性
+version: 1
+description: Agent 给出的风险等级 vs 预期等级对比
+dimension: risk_control
+weight: 0.08
+type: semi_auto
+source: trace + annotation
+source_filter:
+  fields: ["final_answer", "ground_truth.risk_level", "quality_labels.rc_risk_classification"]
+aggregate: "avg(quality_labels.rc_risk_classification) / 5.0"
+components:
+  - name: risk_level_match
+    formula: "extracted_risk_level == ground_truth.risk_level"
+    source: final_answer + ground_truth.risk_level
+    description: 从 Agent 输出中提取的风险等级是否与预期一致
+hard_fail: false
+note: |
+  需要 case 中有 ground_truth.risk_level（如 high/medium/low）。
+  系统尝试从 final_answer 中正则提取风险等级关键词，人工标注校准。

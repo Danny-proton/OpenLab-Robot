@@ -1,0 +1,20 @@
+name: bv_customer_experience
+display_name: 客户体验影响
+version: 1
+description: 处理时间是否在可接受阈值内（latency 与 SLA 对比）
+dimension: business_value
+weight: 0.05
+type: auto
+source: trace
+source_filter:
+  fields: ["latency_ms"]
+aggregate: "min(sla_threshold / actual_latency, 1.0)"
+components:
+  - name: latency_sla_ratio
+    formula: "min(sla_threshold_ms / actual_latency_ms, 1.0)"
+    source: trace + case.sla_threshold_ms
+    description: 实际处理时间与 SLA 阈值的比率，超过 SLA 则按比例扣分
+hard_fail: false
+note: |
+  增强现有 efficiency 指标的延迟部分。
+  需要 case 中定义 sla_threshold_ms（SLA 阈值毫秒数），默认 30000ms。

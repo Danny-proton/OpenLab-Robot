@@ -1,0 +1,20 @@
+name: bv_sop_completeness
+display_name: 业务流程完整性
+version: 1
+description: 是否覆盖 SOP 所有关键步骤（基于 trace 步骤与 SOP 清单比对）
+dimension: business_value
+weight: 0.08
+type: semi_auto
+source: trace
+source_filter:
+  event_types: ["tool.call.start", "tool.call.end"]
+aggregate: "covered_sop_steps / total_sop_steps"
+components:
+  - name: sop_step_coverage
+    formula: "count(sop_steps covered by trace) / count(total sop_steps)"
+    source: trace + case.expected.sop_steps
+    description: SOP 关键步骤在 trace 中是否被覆盖
+hard_fail: false
+note: |
+  需要 case 中定义 expected.sop_steps 列表。
+  由标注人员在标注时补充 SOP 步骤，系统自动比对 trace 覆盖率。

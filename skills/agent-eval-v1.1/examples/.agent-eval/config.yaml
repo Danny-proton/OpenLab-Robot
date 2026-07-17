@@ -1,0 +1,36 @@
+adapter: mock
+dirs:
+  cases: cases
+  metrics: metrics
+  adapters: adapters
+  mutators: mutators
+  traces: traces
+  runs: runs
+  scores: scores
+  reports: reports
+  patches: patches
+weights: {}
+trace:
+  dimensions: [trust, reliability, adaptability, convention, effectiveness]
+  weights:
+    trust: 0.25
+    reliability: 0.20
+    adaptability: 0.15
+    convention: 0.15
+    effectiveness: 0.25
+  target_scores:
+    trust:        {lo: 4.8, hi: 5.0}
+    reliability:  {lo: 4.5, hi: 5.0}
+    adaptability: {lo: 4.2, hi: 4.8}
+    convention:   {lo: 4.2, hi: 4.8}
+    effectiveness: {lo: 4.5, hi: 5.0}
+extra:
+  trace_max_kb_per_case: 200
+  accept_train_threshold: 0.03
+  accept_latency_max_ratio: 1.5
+report:
+  report_format: html
+  report_sections: all
+  pdf_page_size: A4
+  pdf_include_cover: true
+  pdf_include_toc: true

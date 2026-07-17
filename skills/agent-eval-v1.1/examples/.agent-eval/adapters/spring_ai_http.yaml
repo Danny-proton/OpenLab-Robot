@@ -1,0 +1,42 @@
+# Spring AI HTTP adapter — 黑盒调用 Spring AI agent 的 /api/chat
+# 把 config.yaml 里 adapter 改成 spring_ai_http 来使用
+
+type: http
+description: |
+  黑盒 HTTP 调用 Spring AI agent。
+  eval_runner.py 会 POST 到 endpoint，传入 case.input 和 case_run_id。
+  后端需要返回 {final_answer, trace, status, latency_ms}。
+
+# 你的 Spring AI agent 暴露的评测 endpoint
+endpoint: http://localhost:8080/api/chat
+
+# 鉴权 header（可选）
+# auth_header: "Bearer your-token-here"
+
+# 请求超时（秒）
+timeout_s: 60
+
+# 字段映射：Spring AI 端吐出的 trace 字段名 -> agent-eval 内部 schema
+# 见 guides/02_trace_contract.md
+trace_mapping:
+  eventType: event
+  stepNumber: step
+  agentName: agent
+  toolName: tool
+  toolArguments: arguments
+  toolResult: result
+  errorMessage: error
+  finalAnswer: final_answer
+  promptHash: prompt_hash
+  inputTokens: input_tokens
+  outputTokens: output_tokens
+  memoryQuery: memory_query
+  memoryHits: memory_hits
+  timestamp: ts
+
+# 脱敏字段（dot-path）
+# 这些字段在写入 trace 文件前会被替换成 <redacted>
+redact_fields:
+  - result.ssn
+  - result.id_card
+  - result.phone

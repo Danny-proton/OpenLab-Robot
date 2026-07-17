@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Eval — 标注系统</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+       background: #f0f2f5; color: #1a1a2e; font-size: 14px; display: flex; height: 100vh; }
+.sidebar { width: 280px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 16px; border-bottom: 1px solid #e2e8f0; }
+.sidebar-header h1 { font-size: 16px; color: #2563eb; }
+.sidebar-header .progress { margin-top: 8px; }
+.sidebar-header .progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+.sidebar-header .progress-fill { height: 100%; background: #2563eb; transition: width 0.3s; }
+.sidebar-header .progress-text { font-size: 12px; color: #64748b; margin-top: 4px; }
+.filters { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px; }
+.filters select, .filters input { padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 13px; }
+.case-list { flex: 1; overflow-y: auto; padding: 8px; }
+.case-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; transition: background 0.15s; display: flex; justify-content: space-between; align-items: center; }
+.case-item:hover { background: #f1f5f9; }
+.case-item.active { background: #dbeafe; border-left: 3px solid #2563eb; }
+.case-item .cid { font-weight: 600; font-size: 13px; }
+.case-item .cname { font-size: 11px; color: #64748b; margin-top: 2px; }
+.case-item .status { font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+.case-item .status.done { background: #dcfce7; color: #16a34a; }
+.case-item .status.pending { background: #fef3c7; color: #d97706; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main-header { padding: 16px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.main-header h2 { font-size: 18px; }
+.content { flex: 1; display: flex; overflow: hidden; }
+.case-detail { flex: 1; padding: 24px; overflow-y: auto; }
+.annotate-panel { width: 360px; background: #fff; border-left: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; }
+.section-title { font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #dbeafe; }
+.field-group { margin-bottom: 16px; }
+.field-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+.field-group input, .field-group select, .field-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 13px; }
+.field-group textarea { min-height: 60px; resize: vertical; }
+.score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.score-row .label { width: 160px; font-size: 13px; color: #475569; }
+.score-row .stars { display: flex; gap: 2px; }
+.score-row .star { font-size: 20px; cursor: pointer; color: #e2e8f0; transition: color 0.15s; }
+.score-row .star.active { color: #f59e0b; }
+.score-row .star:hover, .score-row .star:hover ~ .star { color: #fbbf24; }
+.btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: #2563eb; color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-success { background: #16a34a; color: white; }
+.btn-success:hover { background: #15803d; }
+.btn-secondary { background: #e2e8f0; color: #475569; }
+.btn-secondary:hover { background: #cbd5e1; }
+.prompt-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+.output-box { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+.risk-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.risk-badge.high { background: #fee2e2; color: #dc2626; }
+.risk-badge.medium { background: #fef3c7; color: #d97706; }
+.risk-badge.low { background: #dcfce7; color: #16a34a; }
+.dim-tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; background: #e0e7ff; color: #4338ca; margin-right: 4px; }
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+.toast.show { opacity: 1; }
+.toast.success { background: #16a34a; }
+.toast.error { background: #dc2626; }
+.keyboard-hint { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+.keyboard-hint kbd { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 1px 4px; font-size: 10px; }
+.auto-score { font-size: 12px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>Agent Eval 标注</h1>
+    <div class="progress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-text" id="progressText">0 / 0 已标注</div>
+    </div>
+  </div>
+  <div class="filters">
+    <select id="filterRisk"><option value="">全部风险等级</option><option value="high">高风险</option><option value="medium">中风险</option><option value="low">低风险</option></select>
+    <select id="filterDim"><option value="">全部维度</option><option value="compliance">合规</option><option value="operational">运营</option><option value="functional">功能</option></select>
+    <input id="filterSearch" placeholder="搜索用例 ID / 名称..." />
+  </div>
+  <div class="case-list" id="caseList"></div>
+</div>
+<div class="main">
+  <div class="main-header">
+    <h2 id="caseTitle">选择一个用例开始标注</h2>
+    <div>
+      <button class="btn btn-secondary" onclick="prevCase()">上一个</button>
+      <button class="btn btn-primary" onclick="nextCase()">下一个</button>
+      <button class="btn btn-success" onclick="saveCurrent()">保存</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="case-detail" id="caseDetail">
+      <div style="text-align:center;padding:60px;color:#94a3b8;">
+        <p style="font-size:16px;">从左侧选择一个用例</p>
+        <p style="margin-top:8px;">或使用 Tab 键切换用例，Enter 保存标注</p>
+      </div>
+    </div>
+    <div class="annotate-panel" id="annotatePanel" style="display:none;">
+      <div class="section-title">Ground Truth</div>
+      <div class="field-group">
+        <label>业务决策 (decision)</label>
+        <select id="gtDecision"><option value="">—</option><option value="approve">通过 (approve)</option><option value="reject">拒绝 (reject)</option><option value="review">复审 (review)</option></select>
+      </div>
+      <div class="field-group">
+        <label>风险等级</label>
+        <select id="gtRiskLevel"><option value="">—</option><option value="high">高风险</option><option value="medium">中风险</option><option value="low">低风险</option></select>
+      </div>
+      <div class="field-group">
+        <label>SOP 完整</label>
+        <select id="gtSopComplete"><option value="">—</option><option value="true">是</option><option value="false">否</option></select>
+      </div>
+
+      <div class="section-title" style="margin-top:24px;">3+N 维度评分</div>
+      <div id="autoScoreBox" class="auto-score" style="display:none;"></div>
+      <div id="scoreInputs"></div>
+
+      <div class="section-title" style="margin-top:24px;">人工判定</div>
+      <div class="field-group">
+        <label>判定结果</label>
+        <select id="hfPass"><option value="">—</option><option value="true">Pass</option><option value="false">Fail</option></select>
+      </div>
+      <div class="field-group">
+        <label>判定理由</label>
+        <textarea id="hfReason" placeholder="输入判定理由..."></textarea>
+      </div>
+      <div class="field-group">
+        <label>改进建议</label>
+        <textarea id="hfSuggestion" placeholder="输入改进建议..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-success" style="flex:1;" onclick="saveCurrent()">保存 (Enter)</button>
+      </div>
+      <div class="keyboard-hint">
+        <kbd>Tab</kbd> 切换字段 | <kbd>Shift+Tab</kbd> 上一个用例 | <kbd>Enter</kbd> 保存
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const METRICS = [
+  {id: 'bv_decision_accuracy', label: '业务决策准确率'},
+  {id: 'bv_sop_completeness', label: '业务流程完整性'},
+  {id: 'bv_customer_experience', label: '客户体验影响'},
+  {id: 'bv_terminology_accuracy', label: '业务术语准确性'},
+  {id: 'rc_risk_classification', label: '风险分级准确性'},
+];
+let allCases = [];
+let filteredCases = [];
+let currentIndex = -1;
+let currentAnnotation = {};
+
+async function loadCases() {
+  const risk = document.getElementById('filterRisk').value;
+  const dim = document.getElementById('filterDim').value;
+  const search = document.getElementById('filterSearch').value;
+  let url = '/api/cases?';
+  if (risk) url += 'risk_level=' + risk + '&';
+  if (dim) url += 'dimension=' + dim + '&';
+  const resp = await fetch(url);
+  allCases = await resp.json();
+  applySearch(search);
+}
+
+function applySearch(search) {
+  if (!search) { filteredCases = allCases; }
+  else {
+    const s = search.toLowerCase();
+    filteredCases = allCases.filter(c => c.case_id.toLowerCase().includes(s) || c.name.toLowerCase().includes(s));
+  }
+  renderCaseList();
+  updateProgress();
+}
+
+function renderCaseList() {
+  const list = document.getElementById('caseList');
+  list.innerHTML = filteredCases.map((c, i) => `
+    <div class="case-item ${i === currentIndex ? 'active' : ''}" onclick="selectCase(${i})">
+      <div>
+        <div class="cid">${c.case_id}</div>
+        <div class="cname">${c.name || ''}</div>
+      </div>
+      <span class="status ${c.annotated ? 'done' : 'pending'}">${c.annotated ? '已标注' : '待标注'}</span>
+    </div>
+  `).join('');
+}
+
+function updateProgress() {
+  const done = allCases.filter(c => c.annotated).length;
+  const total = allCases.length;
+  const pct = total > 0 ? (done / total * 100).toFixed(1) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${done} / ${total} 已标注 (${pct}%)`;
+}
+
+async function selectCase(index) {
+  currentIndex = index;
+  const c = filteredCases[index];
+  if (!c) return;
+  renderCaseList();
+
+  document.getElementById('caseTitle').innerHTML = `
+    <span>${c.case_id}</span>
+    <span class="risk-badge ${c.risk_level}">${c.risk_level === 'high' ? '高风险' : c.risk_level === 'medium' ? '中风险' : c.risk_level === 'low' ? '低风险' : c.risk_level}</span>
+    ${(c.dimensions || []).map(d => `<span class="dim-tag">${d}</span>`).join('')}
+  `;
+
+  // Case detail
+  const detail = document.getElementById('caseDetail');
+  detail.innerHTML = `
+    <div class="section-title">Prompt</div>
+    <div class="prompt-box">${escHtml(c.prompt)}</div>
+    <div class="section-title">Agent 输出</div>
+    <div class="output-box">${escHtml('（需要运行评测后获取 Agent 输出）')}</div>
+    <div class="section-title">自动化评分</div>
+    <div class="auto-score">自动化评分在运行评测后自动填充。此处展示人工标注与自动评分的对比。</div>
+  `;
+
+  // Load annotation
+  currentAnnotation = c.annotation || {};
+  populateAnnotationForm(currentAnnotation);
+
+  // Show panel
+  document.getElementById('annotatePanel').style.display = 'block';
+
+  // Render score inputs
+  renderScoreInputs();
+}
+
+function populateAnnotationForm(ann) {
+  const gt = ann.ground_truth || {};
+  const ql = ann.quality_labels || {};
+  const hf = ann.human_feedback || {};
+  document.getElementById('gtDecision').value = gt.decision || '';
+  document.getElementById('gtRiskLevel').value = gt.risk_level || '';
+  document.getElementById('gtSopComplete').value = gt.sop_complete === true ? 'true' : gt.sop_complete === false ? 'false' : '';
+  document.getElementById('hfPass').value = ql.pass === true ? 'true' : ql.pass === false ? 'false' : '';
+  document.getElementById('hfReason').value = ql.reason || '';
+  document.getElementById('hfSuggestion').value = hf.suggestion || '';
+
+  METRICS.forEach(m => {
+    const val = ql[m.id];
+    setStarScore(m.id, val || 0);
+  });
+}
+
+function renderScoreInputs() {
+  const container = document.getElementById('scoreInputs');
+  container.innerHTML = METRICS.map(m => `
+    <div class="score-row">
+      <div class="label">${m.label}</div>
+      <div class="stars" id="stars_${m.id}">
+        ${[1,2,3,4,5].map(n => `<span class="star" data-metric="${m.id}" data-score="${n}" onclick="setStarScore('${m.id}', ${n})">&#9733;</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function setStarScore(metricId, score) {
+  const stars = document.querySelectorAll(`#stars_${metricId} .star`);
+  stars.forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.score) <= score);
+  });
+}
+
+function getStarScore(metricId) {
+  const active = document.querySelectorAll(`#stars_${metricId} .star.active`);
+  return active.length;
+}
+
+function gatherAnnotation() {
+  const gtDecision = document.getElementById('gtDecision').value;
+  const gtRiskLevel = document.getElementById('gtRiskLevel').value;
+  const gtSopVal = document.getElementById('gtSopComplete').value;
+  const hfPassVal = document.getElementById('hfPass').value;
+
+  const qualityLabels = {reason: document.getElementById('hfReason').value};
+  METRICS.forEach(m => {
+    const s = getStarScore(m.id);
+    if (s > 0) qualityLabels[m.id] = s;
+  });
+  qualityLabels.pass = hfPassVal === 'true' ? true : hfPassVal === 'false' ? false : null;
+
+  return {
+    case_id: filteredCases[currentIndex]?.case_id,
+    ground_truth: {
+      decision: gtDecision,
+      risk_level: gtRiskLevel,
+      sop_complete: gtSopVal === 'true' ? true : gtSopVal === 'false' ? false : null,
+    },
+    quality_labels: qualityLabels,
+    human_feedback: {
+      approved: qualityLabels.pass,
+      suggestion: document.getElementById('hfSuggestion').value,
+    },
+  };
+}
+
+async function saveCurrent() {
+  if (currentIndex < 0) return;
+  const ann = gatherAnnotation();
+  if (!ann.case_id) return;
+  try {
+    const resp = await fetch('/api/annotations', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(ann),
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      showToast('标注已保存', 'success');
+      loadCases();
+    } else {
+      showToast('保存失败: ' + JSON.stringify(result), 'error');
+    }
+  } catch(e) {
+    showToast('保存失败: ' + e.message, 'error');
+  }
+}
+
+function prevCase() {
+  if (currentIndex > 0) selectCase(currentIndex - 1);
+}
+
+function nextCase() {
+  if (currentIndex < filteredCases.length - 1) selectCase(currentIndex + 1);
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCurrent(); }
+    return;
+  }
+  if (e.key === 'Tab') { e.preventDefault(); e.shiftKey ? prevCase() : nextCase(); }
+  if (e.key === 'Enter') { e.preventDefault(); saveCurrent(); }
+});
+
+// Filter events
+document.getElementById('filterRisk').addEventListener('change', () => loadCases());
+document.getElementById('filterDim').addEventListener('change', () => loadCases());
+document.getElementById('filterSearch').addEventListener('input', e => applySearch(e.target.value));
+
+// Init
+loadCases();
+</script>
+</body>
+</html>

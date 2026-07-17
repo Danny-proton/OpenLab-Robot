@@ -1,0 +1,20 @@
+name: pe_tool_efficiency
+display_name: 工具调用效率
+version: 1
+description: 实际工具调用 vs 必需工具调用的冗余度
+dimension: process_efficiency
+weight: 0.06
+type: auto
+source: trace
+source_filter:
+  event_types: ["tool.call.start", "tool.call.end"]
+aggregate: "required_tool_calls / max(actual_tool_calls, required_tool_calls)"
+components:
+  - name: tool_redundancy_ratio
+    formula: "required_tool_calls / actual_tool_calls"
+    source: trace
+    description: 必需工具调用数 / 实际工具调用数，1.0 为完美效率
+hard_fail: false
+note: |
+  直接复用现有 tool_correctness 的数据。
+  required 来自 case.expected_tools.required，actual 来自 trace。

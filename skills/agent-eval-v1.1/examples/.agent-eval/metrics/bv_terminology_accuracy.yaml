@@ -1,0 +1,20 @@
+name: bv_terminology_accuracy
+display_name: 业务术语准确性
+version: 1
+description: Agent 使用的业务术语是否符合规范（关键词匹配 + 人工标注）
+dimension: business_value
+weight: 0.05
+type: semi_auto
+source: trace + annotation
+source_filter:
+  fields: ["final_answer", "quality_labels.bv_terminology_accuracy"]
+aggregate: "avg(quality_labels.bv_terminology_accuracy) / 5.0"
+components:
+  - name: terminology_keyword_match
+    formula: "count(required_terms found in final_answer) / count(total required_terms)"
+    source: final_answer + case.expected.required_terms
+    description: 必须使用的业务术语在最终答案中的出现率
+hard_fail: false
+note: |
+  需要 case 中定义 expected.required_terms（必须使用的业务术语列表）。
+  关键词匹配作为自动化基线，人工标注校准。
