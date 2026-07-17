@@ -69,18 +69,36 @@
 cp -r skills/agent-eval-v1.1 .claude/skills/agent-eval
 ```
 
-## 快速开始（mock 端到端）
+## 快速开始（mock 端到端，零外部依赖）
+
+> ✅ **开箱即跑**：skill 自带 mock 数据——`examples/.agent-eval/cases/train.yaml` 含 8 条手机银行用例（覆盖 8 种失败触发模式），`examples/.agent-eval/adapters/mock.yaml` 是内置 mock adapter。`scaffold` 会把这些一并复制到目标目录，**无需启动任何后端服务**即可跑通完整评测闭环。
+
+### 0. 环境准备（一次性）
+
+```bash
+# 仅两个第三方依赖，所有脚本零 LLM
+pip install pyyaml openpyxl
+```
+
+### 1. 一键 mock demo（最小可跑通）
 
 ```bash
 SKILL_DIR=.claude/skills/agent-eval
 
-# 1. 初始化
+# 初始化（自动复制 8 条 mock 用例 + mock adapter + config 到 ./.agent-eval/）
 python $SKILL_DIR/scripts/eval_runner.py --scaffold .
 
-# 2. 跑一轮评测（mock，8 条用例）
+# 跑一轮评测（mock，8 条用例，无需任何后端）
 python $SKILL_DIR/scripts/eval_runner.py --config .agent-eval/config.yaml --split train --variant baseline
+# 产出：.agent-eval/reports/<run_id>.html + .md + traces + scores
+```
 
-# 3. 诊断
+预期输出：`TRACE 总分: 3.71/5.0 (一般)` + HTML 报告路径。到这一步 mock demo 已跑通。
+
+### 2. 完整闭环（诊断 → 自优化 → 报告 → 门户）
+
+```bash
+# 3. F1-F8 诊断
 python $SKILL_DIR/scripts/diagnoser.py --config .agent-eval/config.yaml --latest
 
 # 4. 用例自优化（dry-run 看建议）
@@ -89,13 +107,26 @@ python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --l
 # 5. 用例自优化（apply 写入 cases YAML）
 python $SKILL_DIR/scripts/case_optimizer.py --config .agent-eval/config.yaml --latest --split train --apply --non-interactive
 
-# 6. 迭代报告
+# 6. 迭代报告（MD + HTML，深色玻璃态可视化）
 python $SKILL_DIR/scripts/case_iteration_report.py --config .agent-eval/config.yaml --latest
 
 # 7. 生成统一门户（v1.1.1，聚合报告/进度/迭代/质量分到同一网站）
 python $SKILL_DIR/scripts/report_portal.py --config .agent-eval/config.yaml
 # 产出 .agent-eval/reports/portal.html，浏览器打开即可
 ```
+
+### mock 数据说明
+
+| 文件 | 内容 |
+|------|------|
+| `examples/.agent-eval/cases/train.yaml` | 8 条手机银行用例，每条带 `mock_config.mode` 指定失败触发 |
+| `examples/.agent-eval/adapters/mock.yaml` | mock adapter，按 `mock_config.mode` 模拟 8 种失败（skip_tool/repeat_tool/wrong_param/empty_result/hallucinate/redundant/no_memory/success） |
+| `examples/.agent-eval/config.yaml` | 默认用 mock adapter，开箱即跑 |
+| `examples/.agent-eval/cases/adversarial.yaml` | 对抗用例 |
+| `examples/.agent-eval/cases/regression.yaml` | 回归用例 |
+
+8 种失败触发模式覆盖 F1-F8 全部失败类型，mock 系统会模拟出真实的诊断/优化场景，无需真实手机银行 agent 后端。
+
 
 ### 进度埋点（v1.1.1）
 
