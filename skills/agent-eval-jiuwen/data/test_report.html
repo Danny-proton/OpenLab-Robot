@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试执行报告</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif; background: #f5f7fa; color: #1e293b; line-height: 1.6; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+h2 { font-size: 20px; font-weight: 600; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+h3 { font-size: 16px; font-weight: 600; }
+.header { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 32px; border-radius: 12px; margin-bottom: 24px; }
+.header h1 { font-size: 24px; }
+.header .time { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+.summary-card { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; text-align: center; }
+.summary-card .num { font-size: 28px; font-weight: 700; }
+.summary-card .label { font-size: 12px; opacity: 0.85; }
+.summary-card.total .num { color: #93c5fd; }
+.summary-card.pass .num { color: #86efac; }
+.summary-card.fail .num { color: #fca5a5; }
+.summary-card.blocked .num { color: #fde68a; }
+.summary-card.rate .num { color: #c4b5fd; }
+.progress-bar { height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; display: flex; margin: 8px 0 16px; }
+.progress-pass { background: #22c55e; transition: width 0.5s; }
+.progress-fail { background: #ef4444; transition: width 0.5s; }
+.progress-blocked { background: #eab308; transition: width 0.5s; }
+.dimension-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.dim-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.dim-id { font-size: 12px; color: #94a3b8; font-weight: 400; }
+.dim-stats { display: flex; gap: 12px; font-size: 13px; }
+.stat { padding: 2px 8px; border-radius: 4px; }
+.stat-pass { color: #16a34a; background: #f0fdf4; }
+.stat-fail { color: #dc2626; background: #fef2f2; }
+.stat-blocked { color: #ca8a04; background: #fefce8; }
+.stat-rate { font-weight: 700; font-size: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+th { background: #f8fafc; text-align: left; padding: 8px 10px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
+td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+tr:hover td { background: #f8fafc; }
+tr.fail td { background: #fef2f2; }
+tr.blocked td { background: #fefce8; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+.badge-pass { background: #dcfce7; color: #16a34a; }
+.badge-fail { background: #fecaca; color: #dc2626; }
+.badge-blocked { background: #fef9c3; color: #ca8a04; }
+.fail-item { background: #fef2f2; border-left: 3px solid #ef4444; padding: 12px 16px; margin-bottom: 12px; border-radius: 6px; }
+.fail-item h4 { color: #dc2626; font-size: 14px; margin-bottom: 4px; }
+.section { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 测试执行报告</h1>
+        <div class="time">生成时间：2026-06-09 16:09:23</div>
+        <div class="summary-grid">
+            <div class="summary-card total"><div class="num">6</div><div class="label">用例总数</div></div>
+            <div class="summary-card pass"><div class="num">6</div><div class="label">通过</div></div>
+            <div class="summary-card fail"><div class="num">0</div><div class="label">失败</div></div>
+            <div class="summary-card blocked"><div class="num">0</div><div class="label">阻塞</div></div>
+            <div class="summary-card rate"><div class="num">100.0%</div><div class="label">通过率</div></div>
+        </div>
+        <div class="progress-bar" style="margin-top:16px;height:16px;background:rgba(255,255,255,0.3)">
+            <div class="progress-pass" style="width:100.0%"></div>
+            <div class="progress-fail" style="width:0.0%"></div>
+            <div class="progress-blocked" style="width:0.0%"></div>
+        </div>
+        <div style="margin-top:8px;font-size:13px;opacity:0.8">平均响应时间：20ms</div>
+    </div>
+
+    <h2>📂 按测试维度分析</h2>
+    
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>理财产品查询场景覆盖 <span class="dim-id">DIM-001</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">6 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#22c55e">100%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:100%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:0%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody><tr class="pass">
+                <td>TC-0001</td>
+                <td>SC-001</td>
+                <td>精确查询存在的理财产品名称返回详细信息</td>
+                <td>查询高风险高收益的理财产品</td>
+                <td>高</td>
+                <td>200</td>
+                <td>62ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0002</td>
+                <td>SC-001</td>
+                <td>精确查询产品名称包含特殊字符或空格时仍能正确匹配</td>
+                <td>查询XX-理财 产品</td>
+                <td>中</td>
+                <td>200</td>
+                <td>5ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0003</td>
+                <td>SC-002</td>
+                <td>按产品类型模糊查询返回符合条件的列表</td>
+                <td>有哪些货币基金</td>
+                <td>高</td>
+                <td>200</td>
+                <td>4ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0004</td>
+                <td>SC-002</td>
+                <td>按风险偏好模糊查询返回稳健型产品列表</td>
+                <td>推荐几个稳健型理财</td>
+                <td>中</td>
+                <td>200</td>
+                <td>4ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0005</td>
+                <td>SC-003</td>
+                <td>查询不存在的产品名称返回未找到提示并提供建议</td>
+                <td>查询不存在的产品</td>
+                <td>高</td>
+                <td>200</td>
+                <td>28ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0006</td>
+                <td>SC-003</td>
+                <td>查询不存在的产品代码返回未找到提示并提供建议</td>
+                <td>查询产品代码999999</td>
+                <td>中</td>
+                <td>200</td>
+                <td>15ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+</tbody>
+            </table>
+        </div>
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>产品详情与收益解读流程覆盖 <span class="dim-id">DIM-002</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">0 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:0%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:100%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>用户角色与意图覆盖 <span class="dim-id">DIM-003</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">0 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:0%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:100%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>产品对比与风险等级规则覆盖 <span class="dim-id">DIM-004</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">0 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:0%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:100%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>输入形态与上下文覆盖 <span class="dim-id">DIM-005</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">0 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:0%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:100%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="dimension-card">
+            <div class="dim-header">
+                <h3>安全与边界覆盖 <span class="dim-id">DIM-006</span></h3>
+                <div class="dim-stats">
+                    <span class="stat stat-pass">0 通过</span>
+                    <span class="stat stat-fail">0 失败</span>
+                    <span class="stat stat-blocked">0 阻塞</span>
+                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-pass" style="width:0%"></div>
+                <div class="progress-fail" style="width:0%"></div>
+                <div class="progress-blocked" style="width:100%"></div>
+            </div>
+            <table>
+                <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+    <h2>📋 详细测试日志</h2>
+    <div class="section">
+    <table>
+        <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
+        <tbody><tr class="pass">
+                <td>TC-0001</td>
+                <td>SC-001</td>
+                <td>精确查询存在的理财产品名称返回详细信息</td>
+                <td>查询高风险高收益的理财产品</td>
+                <td>200</td>
+                <td>62ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0002</td>
+                <td>SC-001</td>
+                <td>精确查询产品名称包含特殊字符或空格时仍能正确匹配</td>
+                <td>查询XX-理财 产品</td>
+                <td>200</td>
+                <td>5ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0003</td>
+                <td>SC-002</td>
+                <td>按产品类型模糊查询返回符合条件的列表</td>
+                <td>有哪些货币基金</td>
+                <td>200</td>
+                <td>4ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0004</td>
+                <td>SC-002</td>
+                <td>按风险偏好模糊查询返回稳健型产品列表</td>
+                <td>推荐几个稳健型理财</td>
+                <td>200</td>
+                <td>4ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0005</td>
+                <td>SC-003</td>
+                <td>查询不存在的产品名称返回未找到提示并提供建议</td>
+                <td>查询不存在的产品</td>
+                <td>200</td>
+                <td>28ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+<tr class="pass">
+                <td>TC-0006</td>
+                <td>SC-003</td>
+                <td>查询不存在的产品代码返回未找到提示并提供建议</td>
+                <td>查询产品代码999999</td>
+                <td>200</td>
+                <td>15ms</td>
+                <td><span class="badge badge-pass">通过</span></td>
+            </tr>
+</tbody>
+    </table>
+    </div>
+
+    <h2>🔍 失败分析</h2>
+    <div class="section">
+    <p style="padding:16px;text-align:center;color:#16a34a;font-size:16px">✅ 全部通过，无失败用例。</p>
+    </div>
+
+    <h2>💡 建议</h2>
+    <div class="section">
+    <ul style="padding-left:20px">
+        
+        
+        <li>✅ 通过率 ≥ 90%，产品质量达标，建议进行下一轮回归测试。</li>
+        <li>平均响应时间 20ms，请根据业务需求评估是否需要优化。</li>
+    </ul>
+    </div>
+</div>
+</body>
+</html>
