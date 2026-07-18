@@ -27,44 +27,44 @@ import charts as CH  # noqa: E402
 # 配色与样式
 # ---------------------------------------------------------------------------
 
-# 专业蓝灰主色 + 语义色
+# 深色玻璃态设计令牌（与 report_portal / case_iteration_report 统一）
 COLORS = {
-    "primary": "#2563eb",       # 蓝
-    "primary_dark": "#1e40af",
-    "primary_light": "#dbeafe",
-    "secondary": "#64748b",     # 灰
-    "success": "#16a34a",       # 绿
-    "success_light": "#dcfce7",
-    "warning": "#d97706",       # 橙
-    "warning_light": "#fef3c7",
-    "danger": "#dc2626",        # 红
-    "danger_light": "#fee2e2",
-    "neutral": "#f1f5f9",
-    "text": "#0f172a",
-    "text_muted": "#64748b",
-    "border": "#e2e8f0",
-    "bg": "#ffffff",
-    "bg_alt": "#f8fafc",
+    "primary": "#818cf8",       # 靛蓝（深底高亮）
+    "primary_dark": "#6366f1",
+    "primary_light": "rgba(99, 102, 241, 0.18)",
+    "secondary": "#94a3b8",     # 灰
+    "success": "#4ade80",       # 绿
+    "success_light": "rgba(34, 197, 94, 0.16)",
+    "warning": "#fbbf24",       # 橙
+    "warning_light": "rgba(251, 191, 36, 0.15)",
+    "danger": "#f87171",        # 红
+    "danger_light": "rgba(239, 68, 68, 0.16)",
+    "neutral": "rgba(148, 163, 184, 0.14)",
+    "text": "#f1f5f9",
+    "text_muted": "#94a3b8",
+    "border": "rgba(99, 102, 241, 0.18)",
+    "bg": "rgba(30, 41, 59, 0.72)",
+    "bg_alt": "#0f172a",
 }
 
 # 场景通过率阈值
 SCENARIO_PASS_THRESHOLD = 0.8
 SCENARIO_WARN_THRESHOLD = 0.5
 
-# SVG 图表配色（用于热力图、时间线等）
-HEATMAP_COLORS = ["#fee2e2", "#fecaca", "#fde68a", "#fef3c7",
-                  "#d9f99d", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981"]
+# SVG 图表配色（深底可用，白字对比度 ≥ 4.5）
+HEATMAP_COLORS = ["#dc2626", "#ea580c", "#d97706", "#65a30d",
+                  "#16a34a", "#059669", "#0d9488", "#0891b2", "#0284c7"]
 TIMELINE_COLORS = {
-    "agent.run.start": "#2563eb",
-    "agent.run.end": "#16a34a",
+    "agent.run.start": "#3b82f6",
+    "agent.run.end": "#22c55e",
     "model.call.start": "#8b5cf6",
     "model.call.end": "#a78bfa",
     "tool.call.start": "#0891b2",
     "tool.call.end": "#06b6d4",
-    "tool.call.error": "#dc2626",
+    "tool.call.error": "#ef4444",
     "memory.retrieve.start": "#d97706",
     "memory.retrieve.end": "#f59e0b",
-    "planner.step": "#64748b",
+    "planner.step": "#94a3b8",
     "skill.select": "#db2777",
     "skill.load": "#ec4899",
 }
@@ -90,52 +90,118 @@ def _fmt_delta(delta) -> str:
 
 CSS = """
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   color: COLORS_TEXT;
   background: COLORS_BG_ALT;
+  background-image:
+    radial-gradient(at 15% 0%, rgba(99, 102, 241, 0.10) 0px, transparent 50%),
+    radial-gradient(at 85% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+  background-attachment: fixed;
   line-height: 1.6;
   font-size: 14px;
+  min-height: 100vh;
 }
 .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.text-muted { color: COLORS_TEXT_MUTED; }
+
+/* 入场动画（尊重减少动效偏好） */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.report-header, .section, .nav { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.section:nth-of-type(2) { animation-delay: 0.04s; }
+.section:nth-of-type(3) { animation-delay: 0.08s; }
+.section:nth-of-type(4) { animation-delay: 0.12s; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 @media print {
   @page { size: A4; margin: 15mm; }
-  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: white !important; color: #0f172a !important;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .container { max-width: 100%; padding: 0; }
   .no-print { display: none !important; }
-  .section { break-before: page; break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+  .section { background: white !important; border: 1px solid #ccc !important;
+             box-shadow: none !important; backdrop-filter: none !important;
+             break-before: page; break-inside: avoid; }
   .section:first-of-type { break-before: avoid; }
+  .section h2, .section h3, td, .scorecard .value, .rec-item .rec-title { color: #0f172a !important; }
+  th { background: #f1f5f9 !important; color: #0f172a !important; }
+  .scorecard, .timeline-case, .rec-item { background: #f8fafc !important; }
   .report-header { break-after: avoid; }
   .page-break { page-break-before: always; }
   a { text-decoration: none; color: inherit; }
   .report-footer { page-break-inside: avoid; }
 }
 
-/* Header */
+/* Header — 玻璃拟态 + 渐变描边 */
 .report-header {
-  background: linear-gradient(135deg, COLORS_PRIMARY 0%, COLORS_PRIMARY_DARK 100%);
-  color: white; padding: 40px 32px; border-radius: 12px;
-  margin-bottom: 32px; box-shadow: 0 4px 12px rgba(37,99,235,0.15);
+  position: relative; overflow: hidden;
+  background: COLORS_BG;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid COLORS_BORDER; border-radius: 18px;
+  padding: 40px 36px; margin-bottom: 28px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
 }
-.report-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 700; }
-.report-header .subtitle { font-size: 15px; opacity: 0.9; margin-bottom: 16px; }
+.report-header::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+}
+.report-header::after {
+  content: ''; position: absolute; top: -60px; right: -60px;
+  width: 240px; height: 240px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+.report-header h1 {
+  font-size: 30px; margin-bottom: 8px; font-weight: 800; letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 60%, #f0abfc 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.report-header .subtitle { font-size: 14px; color: COLORS_TEXT_MUTED; margin-bottom: 18px; }
 .report-header .meta {
-  display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; opacity: 0.95;
+  display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 13px;
+  color: COLORS_TEXT_MUTED;
 }
 .report-header .meta span { display: inline-flex; align-items: center; gap: 6px; }
-.report-header .meta strong { font-weight: 600; }
+.report-header .meta strong { font-weight: 600; color: COLORS_TEXT; }
 
-/* Section */
-.section { background: COLORS_BG; border-radius: 10px; padding: 28px;
-           margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-           border: 1px solid COLORS_BORDER; }
+/* 吸顶目录 — 玻璃条 */
+.nav {
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+.nav a { transition: color 0.18s ease, text-shadow 0.18s ease; }
+.nav a:hover { color: #c7d2fe !important; text-shadow: 0 0 12px rgba(129, 140, 248, 0.6); }
+
+/* Section — 玻璃卡片 */
+.section {
+  background: COLORS_BG;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-radius: 14px; padding: 28px; margin-bottom: 24px;
+  border: 1px solid COLORS_BORDER;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.section:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 32px rgba(99, 102, 241, 0.14);
+}
 .section h2 { font-size: 20px; color: COLORS_TEXT; margin-bottom: 4px;
-              font-weight: 700; display: flex; align-items: center; gap: 8px; }
+              font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .section h2 .num {
-  display: inline-block; width: 28px; height: 28px; background: COLORS_PRIMARY;
-  color: white; border-radius: 50%; text-align: center; line-height: 28px;
-  font-size: 14px; font-weight: 600;
+  display: inline-block; width: 30px; height: 30px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; border-radius: 9px; text-align: center; line-height: 30px;
+  font-size: 14px; font-weight: 700;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.4);
 }
 .section h3 { font-size: 15px; color: COLORS_TEXT; margin: 20px 0 12px;
               font-weight: 600; }
@@ -144,29 +210,46 @@ body {
 /* Verdict banner */
 .verdict {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 15px;
-  margin-bottom: 16px;
+  padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 15px;
+  margin-bottom: 16px; letter-spacing: 0.3px;
 }
 .verdict.accept { background: COLORS_SUCCESS_LIGHT; color: COLORS_SUCCESS;
-                  border: 1px solid COLORS_SUCCESS; }
+                  border: 1px solid rgba(34, 197, 94, 0.5);
+                  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15); }
 .verdict.reject { background: COLORS_DANGER_LIGHT; color: COLORS_DANGER;
-                  border: 1px solid COLORS_DANGER; }
+                  border: 1px solid rgba(239, 68, 68, 0.5);
+                  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); }
 .verdict.inconclusive { background: COLORS_WARNING_LIGHT; color: COLORS_WARNING;
-                        border: 1px solid COLORS_WARNING; }
+                        border: 1px solid rgba(251, 191, 36, 0.5);
+                        box-shadow: 0 0 20px rgba(251, 191, 36, 0.12); }
 
-/* Scorecards */
+/* Scorecards — 悬浮升起 + 渐变高光扫过 */
 .scorecard-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px; margin-top: 16px;
 }
 .scorecard {
-  background: COLORS_BG_ALT; border: 1px solid COLORS_BORDER;
-  border-radius: 8px; padding: 16px; position: relative;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid COLORS_BORDER;
+  border-radius: 12px; padding: 18px; position: relative; overflow: hidden;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s ease, border-color 0.22s ease;
 }
+.scorecard::before {
+  content: ''; position: absolute; top: 0; left: 0; height: 2px; width: 0;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.scorecard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 14px 32px rgba(99, 102, 241, 0.22);
+}
+.scorecard:hover::before { width: 100%; }
 .scorecard .label { font-size: 12px; color: COLORS_TEXT_MUTED;
                     text-transform: uppercase; letter-spacing: 0.5px; }
-.scorecard .value { font-size: 28px; font-weight: 700; color: COLORS_TEXT;
-                    margin: 4px 0; }
+.scorecard .value { font-size: 28px; font-weight: 800; color: COLORS_TEXT;
+                    margin: 4px 0; font-variant-numeric: tabular-nums; }
 .scorecard .delta { font-size: 13px; font-weight: 600; }
 .scorecard .delta.up { color: COLORS_SUCCESS; }
 .scorecard .delta.down { color: COLORS_DANGER; }
@@ -174,34 +257,49 @@ body {
 
 /* Tables */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid COLORS_BORDER; }
-th { background: COLORS_NEUTRAL; font-weight: 600; color: COLORS_TEXT;
+th, td { padding: 10px 12px; text-align: left;
+         border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+th { background: rgba(99, 102, 241, 0.10); font-weight: 600; color: COLORS_TEXT;
      font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-tr:hover { background: COLORS_BG_ALT; }
+tbody tr { transition: background 0.15s ease; }
+tbody tr:hover { background: rgba(99, 102, 241, 0.08); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .badge {
-  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
   font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.4px; transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.badge.pass { background: COLORS_SUCCESS_LIGHT; color: COLORS_SUCCESS; }
-.badge.fail { background: COLORS_DANGER_LIGHT; color: COLORS_DANGER; }
-.badge.warn { background: COLORS_WARNING_LIGHT; color: COLORS_WARNING; }
+.badge:hover { transform: scale(1.08); }
+.badge.pass { background: COLORS_SUCCESS_LIGHT; color: COLORS_SUCCESS;
+              border: 1px solid rgba(34, 197, 94, 0.35); }
+.badge.fail { background: COLORS_DANGER_LIGHT; color: COLORS_DANGER;
+              border: 1px solid rgba(239, 68, 68, 0.35); }
+.badge.warn { background: COLORS_WARNING_LIGHT; color: COLORS_WARNING;
+              border: 1px solid rgba(251, 191, 36, 0.35); }
 
-/* Bar chart */
+/* Bar chart — 加载生长 + 悬浮提亮 */
 .bar-chart { margin: 16px 0; }
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .bar-row .bar-label { width: 180px; font-size: 13px; color: COLORS_TEXT; }
 .bar-row .bar-track {
-  flex: 1; height: 24px; background: COLORS_NEUTRAL; border-radius: 4px;
+  flex: 1; height: 24px; background: COLORS_NEUTRAL; border-radius: 6px;
   position: relative; overflow: hidden;
 }
 .bar-row .bar-fill {
-  height: 100%; border-radius: 4px; transition: width 0.3s;
+  height: 100%; border-radius: 6px;
   display: flex; align-items: center; padding-left: 8px;
   color: white; font-size: 12px; font-weight: 600;
+  background-image: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+  animation: barGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: filter 0.18s ease;
 }
+.bar-row:hover .bar-fill { filter: brightness(1.25); }
+@keyframes barGrow { from { transform: scaleX(0); transform-origin: left; }
+                     to { transform: scaleX(1); transform-origin: left; } }
 .bar-row .bar-value { width: 80px; font-size: 13px; font-weight: 600;
-                      text-align: right; color: COLORS_TEXT; }
+                      text-align: right; color: COLORS_TEXT;
+                      font-variant-numeric: tabular-nums; }
 
 /* Heatmap */
 .heatmap { overflow-x: auto; margin: 16px 0; }
@@ -212,11 +310,26 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-weight: 600; color: COLORS_TEXT;
 }
 
+/* SVG 图表悬浮微光 */
+.section svg { transition: filter 0.2s ease; }
+.section svg:hover { filter: drop-shadow(0 4px 18px rgba(99, 102, 241, 0.18)); }
+.hm-cell { transition: filter 0.15s ease, opacity 0.15s ease; cursor: default; }
+.hm-cell:hover { filter: brightness(1.45) saturate(1.1); }
+.tl-cell { transition: filter 0.15s ease; cursor: default; }
+.tl-cell:hover { filter: brightness(1.35); }
+
 /* Timeline */
 .timeline { margin: 16px 0; }
 .timeline-case {
-  background: COLORS_BG_ALT; border: 1px solid COLORS_BORDER;
-  border-radius: 8px; padding: 12px; margin-bottom: 12px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid COLORS_BORDER;
+  border-radius: 10px; padding: 14px; margin-bottom: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.timeline-case:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.16);
 }
 .timeline-case .case-label { font-size: 13px; font-weight: 600;
                              margin-bottom: 8px; color: COLORS_TEXT; }
@@ -232,27 +345,39 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .timeline-step.error { outline: 2px solid COLORS_DANGER; }
 .timeline-step .tooltip {
   display: none; position: absolute; bottom: 100%; left: 50%;
-  transform: translateX(-50%); background: COLORS_TEXT; color: white;
-  padding: 6px 10px; border-radius: 4px; font-size: 11px; white-space: nowrap;
-  z-index: 10; margin-bottom: 4px;
+  transform: translateX(-50%); background: #1e293b; color: COLORS_TEXT;
+  border: 1px solid COLORS_BORDER;
+  padding: 6px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap;
+  z-index: 10; margin-bottom: 4px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 .timeline-step:hover .tooltip { display: block; }
 
 /* Pareto */
 .pareto-chart { margin: 16px 0; }
 
-/* Recommendations */
+/* Recommendations — 悬浮右移 + 发光 */
 .rec-list { list-style: none; }
 .rec-item {
-  background: COLORS_BG_ALT; border-left: 4px solid COLORS_PRIMARY;
-  padding: 14px 18px; margin-bottom: 10px; border-radius: 0 8px 8px 0;
+  background: rgba(15, 23, 42, 0.5);
+  border-left: 4px solid COLORS_PRIMARY;
+  padding: 14px 18px; margin-bottom: 10px; border-radius: 0 10px 10px 0;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s ease, background 0.2s ease;
+}
+.rec-item:hover {
+  transform: translateX(6px);
+  background: rgba(30, 41, 59, 0.85);
+  box-shadow: -6px 0 24px rgba(99, 102, 241, 0.18);
 }
 .rec-item .rec-title { font-weight: 600; color: COLORS_TEXT; margin-bottom: 4px; }
 .rec-item .rec-desc { font-size: 13px; color: COLORS_TEXT_MUTED; }
 .rec-item .rec-meta { font-size: 12px; color: COLORS_SECONDARY; margin-top: 6px; }
 .rec-item.high { border-left-color: COLORS_DANGER; }
+.rec-item.high:hover { box-shadow: -6px 0 24px rgba(239, 68, 68, 0.22); }
 .rec-item.medium { border-left-color: COLORS_WARNING; }
+.rec-item.medium:hover { box-shadow: -6px 0 24px rgba(251, 191, 36, 0.18); }
 .rec-item.low { border-left-color: COLORS_SUCCESS; }
+.rec-item.low:hover { box-shadow: -6px 0 24px rgba(34, 197, 94, 0.18); }
 
 /* Footer */
 .report-footer {
@@ -275,15 +400,30 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Tool graph */
 .tool-graph { margin: 16px 0; }
 
+/* 打印按钮 */
+.print-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; border: none; padding: 10px 26px;
+  border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+.print-btn:hover {
+  transform: translateY(-2px); filter: brightness(1.12);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+}
+.print-btn:active { transform: translateY(0); }
+
 /* Code blocks */
 pre {
-  background: COLORS_TEXT; color: #e2e8f0; padding: 14px;
-  border-radius: 6px; overflow-x: auto; font-size: 12px;
+  background: #020617; color: #e2e8f0; padding: 14px;
+  border: 1px solid COLORS_BORDER;
+  border-radius: 8px; overflow-x: auto; font-size: 12px;
   font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
 }
 code { font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
-       background: COLORS_NEUTRAL; padding: 1px 6px; border-radius: 3px;
-       font-size: 12px; color: COLORS_PRIMARY_DARK; }
+       background: rgba(99, 102, 241, 0.14); padding: 1px 6px; border-radius: 4px;
+       font-size: 12px; color: #a5b4fc; }
 pre code { background: none; padding: 0; color: inherit; }
 """
 
@@ -455,11 +595,11 @@ def svg_heatmap(heatmap_data: dict) -> str:
     total_h = header_h + len(rows) * cell_h
 
     def color_for(score: float) -> str:
-        if score >= 0.9: return "#10b981"
-        if score >= 0.7: return "#6ee7b7"
-        if score >= 0.5: return "#fde68a"
-        if score >= 0.3: return "#fb923c"
-        return "#f87171"
+        if score >= 0.9: return "#047857"
+        if score >= 0.7: return "#059669"
+        if score >= 0.5: return "#b45309"
+        if score >= 0.3: return "#c2410c"
+        return "#b91c1c"
 
     # 表头
     headers = [f'<text x="{label_w + i * cell_w + cell_w/2}" y="20" font-size="11" font-weight="600" text-anchor="middle" fill="{COLORS["text"]}" font-family="sans-serif">{_h(m.replace("_"," ")[:12])}</text>'
@@ -476,19 +616,19 @@ def svg_heatmap(heatmap_data: dict) -> str:
             x = label_w + mi * cell_w
             v = row.get("scores", {}).get(m, 0)
             c = color_for(v)
-            cells.append(f'<rect x="{x}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{c}" rx="3"/>')
-            cells.append(f'<text x="{x + cell_w/2}" y="{y + cell_h/2 + 4}" font-size="11" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif">{v:.2f}</text>')
+            cells.append(f'<rect class="hm-cell" x="{x}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{c}" rx="3"/>')
+            cells.append(f'<text x="{x + cell_w/2}" y="{y + cell_h/2 + 4}" font-size="11" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif" pointer-events="none">{v:.2f}</text>')
         # weighted
         x = label_w + len(metrics) * cell_w
         w = row.get("weighted", 0)
         c = color_for(w)
-        cells.append(f'<rect x="{x}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{c}" rx="3"/>')
-        cells.append(f'<text x="{x + cell_w/2}" y="{y + cell_h/2 + 4}" font-size="11" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif">{w:.2f}</text>')
+        cells.append(f'<rect class="hm-cell" x="{x}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{c}" rx="3"/>')
+        cells.append(f'<text x="{x + cell_w/2}" y="{y + cell_h/2 + 4}" font-size="11" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif" pointer-events="none">{w:.2f}</text>')
         # status
         x2 = x + cell_w
         status = "FAIL" if row.get("is_hard_fail") else "PASS"
-        sc = COLORS["danger"] if row.get("is_hard_fail") else COLORS["success"]
-        cells.append(f'<rect x="{x2}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{sc}" rx="3"/>')
+        sc = "#b91c1c" if row.get("is_hard_fail") else "#047857"
+        cells.append(f'<rect class="hm-cell" x="{x2}" y="{y}" width="{cell_w-2}" height="{cell_h-2}" fill="{sc}" rx="3"/>')
         cells.append(f'<text x="{x2 + cell_w/2}" y="{y + cell_h/2 + 4}" font-size="11" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif">{status}</text>')
 
     return f"""
@@ -531,8 +671,8 @@ def svg_timeline(timelines: list[dict]) -> str:
             tooltip_text = f"step {step.get('step', si+1)}: {et} {tool} ({step.get('latency_ms',0)}ms)"
             svg_steps.append(f"""
             <g>
-              <rect x="{x}" y="0" width="{step_size}" height="{step_size}" fill="{color}" rx="4"/>
-              <text x="{x + step_size/2}" y="{step_size/2 + 4}" font-size="10" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif">{_h(label)}</text>
+              <rect class="tl-cell" x="{x}" y="0" width="{step_size}" height="{step_size}" fill="{color}" rx="4"/>
+              <text x="{x + step_size/2}" y="{step_size/2 + 4}" font-size="10" font-weight="600" text-anchor="middle" fill="white" font-family="sans-serif" pointer-events="none">{_h(label)}</text>
               <title>{_h(tooltip_text)}</title>
             </g>""")
 
@@ -553,8 +693,8 @@ def svg_timeline(timelines: list[dict]) -> str:
               <td class="num">{step.get('step', '')}</td>
               <td><code>{_h(et)}</code></td>
               <td>{_h(tool) if tool else '<span style="color:#94a3b8">—</span>'}</td>
-              <td style="font-size:11px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis">{args_str}</td>
-              <td style="font-size:11px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis">{result_str}</td>
+              <td style="font-size:11px;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis">{args_str}</td>
+              <td style="font-size:11px;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis">{result_str}</td>
               <td>{status_badge}</td>
               <td class="num">{latency}ms</td>
             </tr>""")
@@ -632,7 +772,7 @@ def _build_call_tree(steps: list[dict]) -> str:
                 child_html += render_node(c, depth + 1)
             return f'<div style="margin:2px 0;font-size:12px;color:{COLORS["text"]}">{indent}{icon} <span style="color:{color};font-weight:600">{_h(label)}</span> <span style="color:#94a3b8;font-size:11px">{_h(et)}</span> {status_icon}{child_html}</div>'
 
-        return '<div style="background:#f8fafc;padding:12px;border-radius:6px;font-family:monospace">' + "".join(render_node(r) for r in roots) + '</div>'
+        return '<div style="background:rgba(15,23,42,0.55);border:1px solid rgba(99,102,241,0.18);padding:12px;border-radius:8px;font-family:monospace">' + "".join(render_node(r) for r in roots) + '</div>'
     else:
         lines = []
         for s in steps:
@@ -647,7 +787,7 @@ def _build_call_tree(steps: list[dict]) -> str:
             status_icon = "✅" if status == "success" else "❌"
             latency = s.get("latency_ms", 0)
             lines.append(f'<div style="margin:2px 0;font-size:12px;color:{COLORS["text"]}">{icon} <span style="color:{color};font-weight:600">{_h(label)}</span> <span style="color:#94a3b8;font-size:11px">{_h(et)}</span> {status_icon} <span style="color:#94a3b8;font-size:11px">{latency}ms</span></div>')
-        return '<div style="background:#f8fafc;padding:12px;border-radius:6px;font-family:monospace">' + "".join(lines) + '</div>'
+        return '<div style="background:rgba(15,23,42,0.55);border:1px solid rgba(99,102,241,0.18);padding:12px;border-radius:8px;font-family:monospace">' + "".join(lines) + '</div>'
 
 
 def svg_iteration_curve(curve: list[dict]) -> str:
@@ -1014,7 +1154,7 @@ def _trace_radar_svg(radar: dict) -> str:
     labels = radar.get("labels", [])
     scores = radar.get("scores", [])
     if not labels or not scores:
-        return '<div style="color:#64748b;padding:24px;text-align:center">暂无 TRACE 数据</div>'
+        return '<div style="color:#94a3b8;padding:24px;text-align:center">暂无 TRACE 数据</div>'
 
     n = len(labels)
     cx, cy, R = 180, 180, 130
@@ -1042,11 +1182,11 @@ def _trace_radar_svg(radar: dict) -> str:
             angle = angle_step * i - 3.14159265 / 2
             rr = R * level
             gp.append(f"{cx + rr * math.cos(angle)},{cy + rr * math.sin(angle)}")
-        grid_lines += f'<polygon points="{" ".join(gp)}" fill="none" stroke="#e2e8f0" stroke-width="1"/>'
+        grid_lines += f'<polygon points="{" ".join(gp)}" fill="none" stroke="rgba(148,163,184,0.22)" stroke-width="1"/>'
 
     # 数据多边形
     data_pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in pts)
-    data_polygon = f'<polygon points="{data_pts}" fill="rgba(37,99,235,0.15)" stroke="#2563eb" stroke-width="2.5"/>'
+    data_polygon = f'<polygon points="{data_pts}" fill="rgba(99,102,241,0.28)" stroke="#818cf8" stroke-width="2.5"/>'
 
     # 轴线 + 标签
     axes_and_labels = ""
@@ -1054,7 +1194,7 @@ def _trace_radar_svg(radar: dict) -> str:
         angle = angle_step * i - 3.14159265 / 2
         ex = cx + R * math.cos(angle)
         ey = cy + R * math.sin(angle)
-        axes_and_labels += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#cbd5e1" stroke-width="1"/>'
+        axes_and_labels += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="rgba(148,163,184,0.3)" stroke-width="1"/>'
 
         # 标签偏移
         lx = cx + (R + 28) * math.cos(angle)
@@ -1062,21 +1202,21 @@ def _trace_radar_svg(radar: dict) -> str:
         anchors = "middle"
         axes_and_labels += (f'<text x="{lx:.1f}" y="{ly:.1f}" '
                             f'text-anchor="middle" dominant-baseline="central" '
-                            f'font-size="13" fill="#0f172a" font-weight="600">{_h(labels[i])}</text>')
+                            f'font-size="13" fill="#e2e8f0" font-weight="600">{_h(labels[i])}</text>')
 
     # 分数点
     dots = ""
     for i, p in enumerate(pts):
-        dots += (f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="5" fill="#2563eb" stroke="#fff" stroke-width="2"/>'
+        dots += (f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="5" fill="#818cf8" stroke="#0f172a" stroke-width="2"/>'
                  f'<text x="{p[0]:.1f}" y="{p[1] - 12:.1f}" text-anchor="middle" '
-                 f'font-size="12" fill="#2563eb" font-weight="700">{scores[i]:.1f}</text>')
+                 f'font-size="12" fill="#a5b4fc" font-weight="700">{scores[i]:.1f}</text>')
 
     svg = f'''<svg viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">
       {grid_lines}
       {data_polygon}
       {axes_and_labels}
       {dots}
-      <circle cx="{cx}" cy="{cy}" r="3" fill="#64748b"/>
+      <circle cx="{cx}" cy="{cy}" r="3" fill="#94a3b8"/>
     </svg>'''
     return svg
 
@@ -1092,7 +1232,7 @@ def section_trace_dimensions(charts_data: dict) -> str:
     <div class="section" id="trace-dimensions">
       <h2><span class="num">12</span>TRACE 五维评测</h2>
       <p class="lead">五维能力雷达：Trust | Reliability | Adaptability | Convention | Effectiveness</p>
-      <div style="color:#64748b;padding:32px;text-align:center;border:1px dashed #e2e8f0;border-radius:8px">
+      <div style="color:#94a3b8;padding:32px;text-align:center;border:1px dashed rgba(148,163,184,0.3);border-radius:8px">
         <p>暂无 TRACE 数据。</p>
         <p style="font-size:13px;margin-top:8px">请在 <code>.agent-eval/config.yaml</code> 中配置 <code>trace</code> 段后重新运行评测。</p>
       </div>
@@ -1105,9 +1245,9 @@ def section_trace_dimensions(charts_data: dict) -> str:
     scores = radar.get("scores", [])
     target_zones = radar.get("target_zones", [])
 
-    status_colors = {"excellent": "#16a34a", "good": "#2563eb", "fair": "#d97706", "poor": "#dc2626"}
+    status_colors = {"excellent": "#4ade80", "good": "#60a5fa", "fair": "#fbbf24", "poor": "#f87171"}
     status_labels = {"excellent": "优秀", "good": "良好", "fair": "一般", "poor": "差"}
-    sc = status_colors.get(status, "#64748b")
+    sc = status_colors.get(status, "#94a3b8")
     sl = status_labels.get(status, status)
 
     status_badge = f'<span style="background:{sc};color:#fff;padding:3px 12px;border-radius:99px;font-size:12px;font-weight:600">{sl}</span>'
@@ -1120,23 +1260,23 @@ def section_trace_dimensions(charts_data: dict) -> str:
         tz_hi = tz.get("hi", 0)
         if score >= tz_hi:
             st_emoji = "✅"
-            st_color = "#16a34a"
+            st_color = "#4ade80"
         elif score >= tz_lo:
             st_emoji = "⬆"
-            st_color = "#2563eb"
+            st_color = "#60a5fa"
         elif score >= tz_lo - 0.5:
             st_emoji = "⚠️"
-            st_color = "#d97706"
+            st_color = "#fbbf24"
         else:
             st_emoji = "❌"
-            st_color = "#dc2626"
+            st_color = "#f87171"
         rows_html += f"""<tr>
-          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-weight:600">{_h(label)}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center">
+          <td style="padding:10px 16px;border-bottom:1px solid rgba(148,163,184,0.14);font-weight:600">{_h(label)}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid rgba(148,163,184,0.14);text-align:center">
             <span style="font-size:20px;font-weight:700;color:{st_color}">{score:.2f}</span><span style="color:#94a3b8;font-size:13px">/5.0</span>
           </td>
-          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b">{tz_lo:.1f}–{tz_hi:.1f}</td>
-          <td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-align:center">{st_emoji}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid rgba(148,163,184,0.14);text-align:center;color:#94a3b8">{tz_lo:.1f}–{tz_hi:.1f}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid rgba(148,163,184,0.14);text-align:center">{st_emoji}</td>
         </tr>"""
 
     return f"""
@@ -1147,16 +1287,16 @@ def section_trace_dimensions(charts_data: dict) -> str:
         <div style="flex-shrink:0">{_trace_radar_svg(radar)}</div>
         <div style="flex:1;min-width:300px">
           <div style="margin-bottom:16px">
-            <span style="font-size:14px;color:#64748b">TRACE 综合评分</span>
+            <span style="font-size:14px;color:#94a3b8">TRACE 综合评分</span>
             <span style="font-size:28px;font-weight:700;color:{sc};margin-left:8px">{total:.2f}/5.0</span>
             &nbsp;{status_badge}
           </div>
           <table style="width:100%;border-collapse:collapse">
             <thead><tr>
-              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:left;color:#64748b;font-size:12px;text-transform:uppercase">维度</th>
-              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">评分</th>
-              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">目标区间</th>
-              <th style="padding:10px 16px;border-bottom:2px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;text-transform:uppercase">状态</th>
+              <th style="padding:10px 16px;border-bottom:2px solid rgba(99,102,241,0.25);text-align:left;color:#94a3b8;font-size:12px;text-transform:uppercase">维度</th>
+              <th style="padding:10px 16px;border-bottom:2px solid rgba(99,102,241,0.25);text-align:center;color:#94a3b8;font-size:12px;text-transform:uppercase">评分</th>
+              <th style="padding:10px 16px;border-bottom:2px solid rgba(99,102,241,0.25);text-align:center;color:#94a3b8;font-size:12px;text-transform:uppercase">目标区间</th>
+              <th style="padding:10px 16px;border-bottom:2px solid rgba(99,102,241,0.25);text-align:center;color:#94a3b8;font-size:12px;text-transform:uppercase">状态</th>
             </tr></thead>
             <tbody>{rows_html}</tbody>
           </table>
@@ -1272,7 +1412,7 @@ def generate_html_report(
       <h1>Agent 评测报告</h1>
       <div class="subtitle">AgentEvalOps Lite v0.5 — Universal Agent Trace + Professional Report</div>
       <div class="meta">
-        <span><strong>run_id:</strong> <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:3px">{_h(run_id)}</code></span>
+        <span><strong>run_id:</strong> <code style="background:rgba(99,102,241,0.28);padding:2px 8px;border-radius:5px;color:#e0e7ff">{_h(run_id)}</code></span>
         <span><strong>case 数:</strong> {n_cases}</span>
         <span><strong>成功:</strong> {n_success}</span>
         <span><strong>生成时间:</strong> {_h(C.now_iso())}</span>
@@ -1314,10 +1454,7 @@ def generate_html_report(
 <div class="container">
 {header}
 <div class="no-print" style="text-align:right;margin-bottom:16px;">
-  <button onclick="window.print()" style="
-    background:#2563eb;color:white;border:none;padding:10px 24px;
-    border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;
-  ">🖨️ 导出 PDF</button>
+  <button onclick="window.print()" class="print-btn">🖨️ 导出 PDF</button>
 </div>
 {nav_html}
 {"".join(sections)}

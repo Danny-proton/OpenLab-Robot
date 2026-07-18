@@ -1,6 +1,40 @@
 # Agent Eval Skill 版本历史
 
-## v1.1.1 (2026-07-17) — 报告统一管理 + 进度埋点 + 可视化重构【本次发布】
+## v1.1.2 (2026-07-18) — 可视化统一收尾 + 门户数据修复【本次发布】
+
+v1.1.1 完成了门户/4阶段报告/迭代报告三处的深色玻璃态重构，但 **eval loop 深度报告（`html_report.py`，12 节专业报告）仍是旧浅色主题**，与设计语言不统一；同时门户 Overview 存在数据读取 bug。本版本收尾这两件事，**不改变任何评测/优化逻辑**。
+
+### 核心变更 1：html_report.py 深色玻璃态重构
+
+eval_runner 产出的 12 节深度报告（执行摘要/评分卡/场景/指标/工具图/失败归因/迭代/热力图/时间线/TRACE 雷达/建议）整体迁入统一设计体系：
+
+- **设计令牌切换**：`COLORS` 全量替换为深色玻璃态令牌（slate-900 基底 + 靛蓝/紫罗兰渐变 + 半透明语义色），`bg/bg_alt/border/neutral` 等占位符机制不变，所有章节 HTML 零改动自动适配
+- **玻璃拟态**：报告头/吸顶目录/章节卡片全部 `backdrop-filter: blur` + 渐变描边 + 径向氛围光；标题渐变文字；章节序号改为渐变圆角块
+- **悬浮微动效**：scorecard 悬浮 `translateY(-4px)` + 发光 + 顶部渐变条扫过；表格行悬浮高亮；badge 悬浮缩放；rec-item 悬浮右移 + 语义色发光；timeline-case 悬浮升起；SVG 容器悬浮微光；热力图/时间线单元格 `hm-cell/tl-cell` 悬浮提亮
+- **入场动画**：章节 fadeInUp 交错入场；条形图加载生长动画（scaleX）
+- **图表深色适配**：热力图色阶改为深底高对比刻度（白字对比度 ≥ 4.5）；TRACE 雷达图网格/轴线/标签/数据多边形全量深色化；时间线事件色调亮；调用树容器深色化；TRACE 五维表格描边/状态色深色化
+- **打印兼容**：`@media print` 强制浅色输出，A4 分页规则保留
+
+### 核心变更 2：门户数据修复 + 交互增强
+
+- **修复 `_load_runs_summary`**：scorer 落盘的 scores JSON 关键指标嵌套在 `aggregate` 字段内，v1.1.1 读顶层字段导致 Overview「平均分 None / Run 分数趋势暂无数据」。改为下钻 `aggregate`（兼容历史扁平结构），平均分/趋势 sparkline 恢复显示
+- **KPI 布局**：`auto-fill minmax(200px)` → `auto-fit minmax(180px)`，桌面端 6 张 KPI 卡单行排布，不再出现孤卡换行
+- **KPI 数字 count-up**：页面加载时数字滚动动画（cubic 缓出，700ms），非数字值（如 `—`）自动跳过
+- **可访问性**：`report_portal` / `html_report` / `case_iteration_report` / `generate_report` 四处统一支持 `prefers-reduced-motion`（动画/过渡全部降级）
+
+### 其他
+
+- `data/test_report.html` 示例报告用深色主题重新生成（与 `generate_report.py` 当前输出一致）
+- `docs/PRD_REPORT_PORTAL.md` §8 验收标准全部勾选（端到端实测通过），§10 版本表更新
+
+### 端到端验证（mock 全链路实测）
+
+- scaffold → eval（baseline + candidate 两轮）→ diagnoser → case_optimizer（dry-run + apply）→ case_iteration_report → case_quality_checker → sidecar 9 步埋点 → report_portal：全链路零报错
+- `html_report.py` 独立模式 + baseline 对比模式均正常（delta 绿色「较 baseline 提升 14.7 个百分点」正确渲染）
+- 门户 5 页逐页截图核验：Overview 平均分 0.009 恢复显示、6 KPI 单行；Progress 9 步时间线全绿；Quality 12 维雷达正常；Reports 检索/筛选渲染正常；Iterations 前后对比正常
+- `sidecar --no-persist` 不落盘且 stdout JSON 不变（向后兼容）
+
+## v1.1.1 (2026-07-17) — 报告统一管理 + 进度埋点 + 可视化重构
 
 在 v1.1.0 基础上完成"报告统一管理 + 执行流程进度管理 + 可视化深度优化"三件事。**不改变评测逻辑，只增强可观测性与报告呈现**。
 

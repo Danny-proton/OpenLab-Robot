@@ -10,7 +10,7 @@ allowed-tools: Bash(python *), Bash(python3 *), Bash(git *), Bash(ls *), Bash(ca
 
 ## 这是哪个版本
 
-本 skill 是 **agent-eval v1.1.0**（用例自优化版），在 v2.3.0-mobile-bank 基础上演进而来（**演进，不是重写**）：
+本 skill 是 **agent-eval v1.1.2**（用例自优化版），在 v2.3.0-mobile-bank 基础上演进而来（**演进，不是重写**）：
 
 - ✅ **保留** v2.3.0 全部能力：4 阶段流水线、桥接器、9 个 judge agent、F1-F8 失败归因、HRPO 根因、reference 注入、auto_patcher、ask_setup 向导、SideCar、memory_kb、报告管理、Dashboard、CI 回归、3 个 adapter
 - ➕ **【V1.1 核心】用例自优化**：业界空白能力。完成一轮评测后自动迭代测试用例集（改测试本身，不改被测 Agent）。包含 12 维质量评分 + mutation kill matrix + 错误分布分析 + spec 缺口识别 + 增强/修改/废弃建议 + 迭代报告
@@ -19,6 +19,7 @@ allowed-tools: Bash(python *), Bash(python3 *), Bash(git *), Bash(ls *), Bash(ca
 - ➕ **12 维质量评分**：9 标准 + 3 Agent 专属（工具覆盖率/工作流覆盖率/记忆覆盖率）
 - ➕ **双闭环**：prompt 自优化（改 Agent）+ 用例自优化（改测试）正交运行
 - ➕ **【v1.1.1】报告统一门户**：`report_portal.py` 把散落各处的报告/进度/迭代/质量分聚合到单 HTML 5 页网站（Overview/Reports/Progress/Iterations/Quality），深色玻璃态 + 悬浮动效
+- ➕ **【v1.1.2】可视化统一收尾**：`html_report.py` 12 节深度报告迁入深色玻璃态设计体系（悬浮发光 + 入场动画 + 图表深色适配）；门户修复平均分/趋势数据读取，KPI 单行布局 + 数字动画；全部报告支持 `prefers-reduced-motion`
 - ➕ **【v1.1.1】进度埋点**：`progress_tracker.py` + sidecar 改造，9 步评测流程每步 running/completed/failed 持久化到 `progress.jsonl`，session_id 自动续接，门户实时聚合时间线
 
 ## 目录结构（大 skill 套小 skill 套 script）

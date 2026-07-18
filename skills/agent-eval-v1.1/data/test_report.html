@@ -6,56 +6,149 @@
 <title>测试执行报告</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif; background: #f5f7fa; color: #1e293b; line-height: 1.6; }
-.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
-h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-h2 { font-size: 20px; font-weight: 600; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
-h3 { font-size: 16px; font-weight: 600; }
-.header { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 32px; border-radius: 12px; margin-bottom: 24px; }
-.header h1 { font-size: 24px; }
-.header .time { font-size: 13px; opacity: 0.8; margin-top: 4px; }
-.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
-.summary-card { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; text-align: center; }
-.summary-card .num { font-size: 28px; font-weight: 700; }
-.summary-card .label { font-size: 12px; opacity: 0.85; }
-.summary-card.total .num { color: #93c5fd; }
-.summary-card.pass .num { color: #86efac; }
-.summary-card.fail .num { color: #fca5a5; }
-.summary-card.blocked .num { color: #fde68a; }
-.summary-card.rate .num { color: #c4b5fd; }
-.progress-bar { height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; display: flex; margin: 8px 0 16px; }
-.progress-pass { background: #22c55e; transition: width 0.5s; }
-.progress-fail { background: #ef4444; transition: width 0.5s; }
-.progress-blocked { background: #eab308; transition: width 0.5s; }
-.dimension-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #0f172a;
+  background-image:
+    radial-gradient(at 20% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(139, 92, 246, 0.06) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #f1f5f9; line-height: 1.6; font-size: 14px;
+}
+.container { max-width: 1240px; margin: 0 auto; padding: 24px 16px; }
+h1 {
+  font-size: 28px; font-weight: 700;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; margin-bottom: 4px; letter-spacing: -0.5px;
+}
+h2 {
+  font-size: 20px; font-weight: 700; margin: 36px 0 16px;
+  border-left: 4px solid; border-image: linear-gradient(180deg, #6366f1, #8b5cf6) 1;
+  padding-left: 14px; display: flex; align-items: center; gap: 8px;
+}
+h3 { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+.header {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); position: relative; overflow: hidden;
+}
+.header::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); opacity: 0.8;
+}
+.header h1 { font-size: 26px; }
+.header .time { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; }
+.summary-card {
+  background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 10px; padding: 14px; text-align: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
+}
+.summary-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6); opacity: 0.4; transition: all 0.2s;
+}
+.summary-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(99, 102, 241, 0.25); border-color: rgba(99, 102, 241, 0.45); }
+.summary-card:hover::before { opacity: 1; width: 4px; }
+.summary-card .num {
+  font-size: 28px; font-weight: 700;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.summary-card.pass .num { background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.summary-card.fail .num { background: linear-gradient(135deg, #ef4444, #dc2626); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.summary-card.blocked .num { background: linear-gradient(135deg, #fbbf24, #d97706); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.summary-card.rate .num { background: linear-gradient(135deg, #8b5cf6, #a78bfa); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.summary-card .label { font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.progress-bar {
+  height: 14px; background: rgba(15, 23, 42, 0.6); border-radius: 8px;
+  overflow: hidden; display: flex; margin: 10px 0 14px;
+  border: 1px solid rgba(99, 102, 241, 0.15); position: relative;
+}
+.progress-bar:hover { box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25); }
+.progress-pass { background: linear-gradient(135deg, #22c55e, #16a34a); transition: width 0.6s; }
+.progress-fail { background: linear-gradient(135deg, #ef4444, #dc2626); transition: width 0.6s; }
+.progress-blocked { background: linear-gradient(135deg, #fbbf24, #d97706); transition: width 0.6s; }
+.chart-section {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 12px;
+  padding: 20px 24px; margin: 16px 0;
+}
+.chart-title { font-size: 13px; color: #cbd5e1; font-weight: 600; margin-bottom: 12px; }
+.chart-hint { font-size: 11px; color: #64748b; margin-top: 8px; text-align: center; }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 820px) { .charts-row { grid-template-columns: 1fr; } }
+.dimension-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 12px;
+  padding: 20px 24px; margin-bottom: 16px;
+  transition: all 0.2s; position: relative;
+}
+.dimension-card:hover { border-color: rgba(99, 102, 241, 0.35); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 .dim-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.dim-id { font-size: 12px; color: #94a3b8; font-weight: 400; }
-.dim-stats { display: flex; gap: 12px; font-size: 13px; }
-.stat { padding: 2px 8px; border-radius: 4px; }
-.stat-pass { color: #16a34a; background: #f0fdf4; }
-.stat-fail { color: #dc2626; background: #fef2f2; }
-.stat-blocked { color: #ca8a04; background: #fefce8; }
-.stat-rate { font-weight: 700; font-size: 16px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-th { background: #f8fafc; text-align: left; padding: 8px 10px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
-td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
-tr:hover td { background: #f8fafc; }
-tr.fail td { background: #fef2f2; }
-tr.blocked td { background: #fefce8; }
-.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
-.badge-pass { background: #dcfce7; color: #16a34a; }
-.badge-fail { background: #fecaca; color: #dc2626; }
-.badge-blocked { background: #fef9c3; color: #ca8a04; }
-.fail-item { background: #fef2f2; border-left: 3px solid #ef4444; padding: 12px 16px; margin-bottom: 12px; border-radius: 6px; }
-.fail-item h4 { color: #dc2626; font-size: 14px; margin-bottom: 4px; }
-.section { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.dim-id { font-size: 11px; color: #94a3b8; font-weight: 400; padding: 2px 6px; background: rgba(15,23,42,0.6); border-radius: 4px; }
+.dim-stats { display: flex; gap: 10px; font-size: 12px; }
+.stat { padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.stat-pass { color: #22c55e; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); }
+.stat-fail { color: #ef4444; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); }
+.stat-blocked { color: #fbbf24; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); }
+.stat-rate { font-weight: 700; font-size: 14px; padding: 2px 12px; }
+.stat-rate.good { color: #22c55e; background: rgba(34,197,94,0.12); }
+.stat-rate.mid { color: #fbbf24; background: rgba(251,191,36,0.12); }
+.stat-rate.low { color: #ef4444; background: rgba(239,68,68,0.12); }
+.table-wrap { overflow-x: auto; border-radius: 8px; margin-top: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  background: rgba(15, 23, 42, 0.6); color: #94a3b8; text-align: left;
+  padding: 10px 12px; font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+}
+td { padding: 10px 12px; border-bottom: 1px solid rgba(99, 102, 241, 0.08); color: #cbd5e1; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr { transition: all 0.15s; }
+tbody tr:hover { background: rgba(99, 102, 241, 0.08); box-shadow: inset 2px 0 0 #6366f1; }
+tbody tr.row-fail td { background: rgba(239, 68, 68, 0.06); }
+tbody tr.row-fail:hover td { background: rgba(239, 68, 68, 0.12); box-shadow: inset 2px 0 0 #ef4444; }
+tbody tr.row-blocked td { background: rgba(251, 191, 36, 0.06); }
+tbody tr.row-blocked:hover td { background: rgba(251, 191, 36, 0.12); box-shadow: inset 2px 0 0 #fbbf24; }
+code { background: rgba(15,23,42,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; color: #c7d2fe; font-family: "SF Mono", Monaco, monospace; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+.badge-pass { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.badge-fail { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.badge-blocked { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.fail-item {
+  background: rgba(239, 68, 68, 0.06); border-left: 4px solid #ef4444;
+  padding: 14px 18px; margin-bottom: 12px; border-radius: 0 8px 8px 0;
+  transition: all 0.2s;
+}
+.fail-item:hover { transform: translateX(2px); background: rgba(239, 68, 68, 0.12); }
+.fail-item h4 { color: #ef4444; font-size: 14px; margin-bottom: 6px; font-weight: 600; }
+.fail-item p { font-size: 12px; color: #cbd5e1; margin: 2px 0; }
+.fail-item strong { color: #f1f5f9; font-weight: 600; }
+.section {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 12px;
+  padding: 20px 24px;
+}
+.footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid rgba(99, 102, 241, 0.15); color: #64748b; font-size: 12px; text-align: center; }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
         <h1>📊 测试执行报告</h1>
-        <div class="time">生成时间：2026-06-09 16:09:23</div>
+        <div class="time">生成时间：2026-07-18 13:38:18</div>
         <div class="summary-grid">
             <div class="summary-card total"><div class="num">6</div><div class="label">用例总数</div></div>
             <div class="summary-card pass"><div class="num">6</div><div class="label">通过</div></div>
@@ -63,273 +156,362 @@ tr.blocked td { background: #fefce8; }
             <div class="summary-card blocked"><div class="num">0</div><div class="label">阻塞</div></div>
             <div class="summary-card rate"><div class="num">100.0%</div><div class="label">通过率</div></div>
         </div>
-        <div class="progress-bar" style="margin-top:16px;height:16px;background:rgba(255,255,255,0.3)">
+        <div class="progress-bar" style="margin-top:18px;height:16px" data-tooltip="通过 100.0% / 失败 0.0% / 阻塞 0.0%">
             <div class="progress-pass" style="width:100.0%"></div>
             <div class="progress-fail" style="width:0.0%"></div>
             <div class="progress-blocked" style="width:0.0%"></div>
         </div>
-        <div style="margin-top:8px;font-size:13px;opacity:0.8">平均响应时间：20ms</div>
+        <div style="margin-top:8px;font-size:12px;color:#94a3b8">平均响应时间：12ms</div>
+    </div>
+
+    <h2>📈 可视化分析</h2>
+    <div class="charts-row">
+        <div class="chart-section">
+            <div class="chart-title">各维度通过率（hover 条形查看明细）</div>
+            <div style="display:flex;justify-content:center;overflow-x:auto;"><svg width="600" height="260" viewBox="0 0 600 260" style="max-width:100%">
+<g transform="translate(0,10)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">理财产品查询场景覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="380.0" height="20" fill="#22c55e" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>理财产品查询场景覆盖 | 通过率: 100.0% (6/6)</title>
+  </rect>
+  <text x="528.0" y="22" font-size="12" font-weight="600" fill="#22c55e">100%</text>
+</g>
+<g transform="translate(0,50)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">产品详情与收益解读流程覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="0.0" height="20" fill="#ef4444" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>产品详情与收益解读流程覆盖 | 通过率: 0.0% (0/1)</title>
+  </rect>
+  <text x="148.0" y="22" font-size="12" font-weight="600" fill="#ef4444">0%</text>
+</g>
+<g transform="translate(0,90)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">用户角色与意图覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="0.0" height="20" fill="#ef4444" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>用户角色与意图覆盖 | 通过率: 0.0% (0/1)</title>
+  </rect>
+  <text x="148.0" y="22" font-size="12" font-weight="600" fill="#ef4444">0%</text>
+</g>
+<g transform="translate(0,130)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">产品对比与风险等级规则覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="0.0" height="20" fill="#ef4444" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>产品对比与风险等级规则覆盖 | 通过率: 0.0% (0/1)</title>
+  </rect>
+  <text x="148.0" y="22" font-size="12" font-weight="600" fill="#ef4444">0%</text>
+</g>
+<g transform="translate(0,170)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">输入形态与上下文覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="0.0" height="20" fill="#ef4444" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>输入形态与上下文覆盖 | 通过率: 0.0% (0/1)</title>
+  </rect>
+  <text x="148.0" y="22" font-size="12" font-weight="600" fill="#ef4444">0%</text>
+</g>
+<g transform="translate(0,210)">
+  <text x="0" y="20" font-size="12" fill="#cbd5e1" font-family="sans-serif">安全与边界覆盖</text>
+  <rect x="140" y="6" width="380" height="20" fill="rgba(15,23,42,0.6)" rx="4"/>
+  <rect x="140" y="6" width="0.0" height="20" fill="#ef4444" rx="4"
+    opacity="0.85" style="transition:all .3s">
+    <title>安全与边界覆盖 | 通过率: 0.0% (0/1)</title>
+  </rect>
+  <text x="148.0" y="22" font-size="12" font-weight="600" fill="#ef4444">0%</text>
+</g></svg></div>
+            <div class="chart-hint">绿色 ≥90% · 黄色 70-90% · 红色 &lt;70%</div>
+        </div>
+        <div class="chart-section">
+            <div class="chart-title">优先级 × 状态堆叠分布（hover 各段查看数量）</div>
+            <div style="display:flex;justify-content:center;overflow-x:auto;"><svg width="180" height="240" viewBox="0 0 180 240" style="max-width:100%"><rect x="30" y="6" width="10" height="10" fill="#22c55e" rx="2"/><text x="44" y="14" font-size="10" fill="#cbd5e1">通过</text><rect x="90" y="6" width="10" height="10" fill="#ef4444" rx="2"/><text x="104" y="14" font-size="10" fill="#cbd5e1">失败</text><rect x="150" y="6" width="10" height="10" fill="#fbbf24" rx="2"/><text x="164" y="14" font-size="10" fill="#cbd5e1">阻塞</text><line x1="30" y1="190.0" x2="160" y2="190.0" stroke="rgba(99,102,241,0.08)"/><text x="26" y="193.0" text-anchor="end" font-size="9" fill="#64748b">0</text><line x1="30" y1="150.0" x2="160" y2="150.0" stroke="rgba(99,102,241,0.08)"/><text x="26" y="153.0" text-anchor="end" font-size="9" fill="#64748b">0</text><line x1="30" y1="110.0" x2="160" y2="110.0" stroke="rgba(99,102,241,0.08)"/><text x="26" y="113.0" text-anchor="end" font-size="9" fill="#64748b">1</text><line x1="30" y1="70.0" x2="160" y2="70.0" stroke="rgba(99,102,241,0.08)"/><text x="26" y="73.0" text-anchor="end" font-size="9" fill="#64748b">2</text><line x1="30" y1="30.0" x2="160" y2="30.0" stroke="rgba(99,102,241,0.08)"/><text x="26" y="33.0" text-anchor="end" font-size="9" fill="#64748b">3</text><line x1="30" y1="190" x2="160" y2="190" stroke="rgba(99,102,241,0.3)"/><rect x="30" y="30.0" width="36" height="160.0" fill="#22c55e" rx="2" opacity="0.85" style="transition:all .2s"><title>高 · 通过: 3</title></rect><rect x="90" y="30.0" width="36" height="160.0" fill="#22c55e" rx="2" opacity="0.85" style="transition:all .2s"><title>中 · 通过: 3</title></rect><text x="48.0" y="204" text-anchor="middle" font-size="10" fill="#94a3b8">高</text><text x="108.0" y="204" text-anchor="middle" font-size="10" fill="#94a3b8">中</text></svg></div>
+            <div class="chart-hint">每柱代表一个优先级，堆叠通过/失败/阻塞计数</div>
+        </div>
+    </div>
+    <div class="chart-section">
+        <div class="chart-title">响应时间分布（hover 柱查看数量与占比）</div>
+        <div style="display:flex;justify-content:center;overflow-x:auto;"><svg width="460" height="200" viewBox="0 0 460 200" style="max-width:100%"><line x1="40" y1="150.0" x2="440" y2="150.0" stroke="rgba(99,102,241,0.08)"/><text x="36" y="153.0" text-anchor="end" font-size="9" fill="#64748b">0</text><line x1="40" y1="120.0" x2="440" y2="120.0" stroke="rgba(99,102,241,0.08)"/><text x="36" y="123.0" text-anchor="end" font-size="9" fill="#64748b">1</text><line x1="40" y1="90.0" x2="440" y2="90.0" stroke="rgba(99,102,241,0.08)"/><text x="36" y="93.0" text-anchor="end" font-size="9" fill="#64748b">3</text><line x1="40" y1="60.0" x2="440" y2="60.0" stroke="rgba(99,102,241,0.08)"/><text x="36" y="63.0" text-anchor="end" font-size="9" fill="#64748b">4</text><line x1="40" y1="30.0" x2="440" y2="30.0" stroke="rgba(99,102,241,0.08)"/><text x="36" y="33.0" text-anchor="end" font-size="9" fill="#64748b">6</text><line x1="40" y1="150" x2="440" y2="150" stroke="rgba(99,102,241,0.3)"/><rect x="54.0" y="30.0" width="52.0" height="120.0" fill="#22c55e" rx="3" opacity="0.85" style="transition:all .2s"><title><200ms | 数量: 6 | 占比: 100.0%</title></rect><text x="80.0" y="26.0" text-anchor="middle" font-size="11" font-weight="600" fill="#22c55e">6</text><rect x="134.0" y="150.0" width="52.0" height="0.0" fill="#84cc16" rx="3" opacity="0.85" style="transition:all .2s"><title>200-500ms | 数量: 0 | 占比: 0.0%</title></rect><rect x="214.0" y="150.0" width="52.0" height="0.0" fill="#fbbf24" rx="3" opacity="0.85" style="transition:all .2s"><title>500-1000ms | 数量: 0 | 占比: 0.0%</title></rect><rect x="294.0" y="150.0" width="52.0" height="0.0" fill="#f97316" rx="3" opacity="0.85" style="transition:all .2s"><title>1-3s | 数量: 0 | 占比: 0.0%</title></rect><rect x="374.0" y="150.0" width="52.0" height="0.0" fill="#ef4444" rx="3" opacity="0.85" style="transition:all .2s"><title>>3s | 数量: 0 | 占比: 0.0%</title></rect><text x="80.0" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">&lt;200ms</text><text x="160.0" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">200-500ms</text><text x="240.0" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">500-1000ms</text><text x="320.0" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">1-3s</text><text x="400.0" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">&gt;3s</text></svg></div>
+        <div class="chart-hint">按响应时间分桶统计，颜色由绿到红代表时延递增</div>
     </div>
 
     <h2>📂 按测试维度分析</h2>
     
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>理财产品查询场景覆盖 <span class="dim-id">DIM-001</span></h3>
+                <h3><span class="dim-name">理财产品查询场景覆盖</span> <code class="dim-id">DIM-001</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">6 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#22c55e">100%</span>
+                    <span class="stat stat-rate good">100%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:100%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:0%"></div>
+            <div class="progress-bar" data-tooltip="通过 100.0% / 失败 0.0% / 阻塞 0.0%">
+                <div class="progress-pass" style="width:100.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:0.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
-                <tbody><tr class="pass">
-                <td>TC-0001</td>
+                <tbody><tr class="row-pass">
+                <td><code>TC-0001</code></td>
                 <td>SC-001</td>
                 <td>精确查询存在的理财产品名称返回详细信息</td>
                 <td>查询高风险高收益的理财产品</td>
                 <td>高</td>
                 <td>200</td>
-                <td>62ms</td>
+                <td class="num">15ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0002</td>
+<tr class="row-pass">
+                <td><code>TC-0002</code></td>
                 <td>SC-001</td>
                 <td>精确查询产品名称包含特殊字符或空格时仍能正确匹配</td>
                 <td>查询XX-理财 产品</td>
                 <td>中</td>
                 <td>200</td>
-                <td>5ms</td>
+                <td class="num">6ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0003</td>
+<tr class="row-pass">
+                <td><code>TC-0003</code></td>
                 <td>SC-002</td>
                 <td>按产品类型模糊查询返回符合条件的列表</td>
                 <td>有哪些货币基金</td>
                 <td>高</td>
                 <td>200</td>
-                <td>4ms</td>
+                <td class="num">3ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0004</td>
+<tr class="row-pass">
+                <td><code>TC-0004</code></td>
                 <td>SC-002</td>
                 <td>按风险偏好模糊查询返回稳健型产品列表</td>
                 <td>推荐几个稳健型理财</td>
                 <td>中</td>
                 <td>200</td>
-                <td>4ms</td>
+                <td class="num">19ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0005</td>
+<tr class="row-pass">
+                <td><code>TC-0005</code></td>
                 <td>SC-003</td>
                 <td>查询不存在的产品名称返回未找到提示并提供建议</td>
                 <td>查询不存在的产品</td>
                 <td>高</td>
                 <td>200</td>
-                <td>28ms</td>
+                <td class="num">5ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0006</td>
+<tr class="row-pass">
+                <td><code>TC-0006</code></td>
                 <td>SC-003</td>
                 <td>查询不存在的产品代码返回未找到提示并提供建议</td>
                 <td>查询产品代码999999</td>
                 <td>中</td>
                 <td>200</td>
-                <td>15ms</td>
+                <td class="num">26ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
 </tbody>
             </table>
+            </div>
         </div>
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>产品详情与收益解读流程覆盖 <span class="dim-id">DIM-002</span></h3>
+                <h3><span class="dim-name">产品详情与收益解读流程覆盖</span> <code class="dim-id">DIM-002</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">0 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                    <span class="stat stat-rate low">0%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:0%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:100%"></div>
+            <div class="progress-bar" data-tooltip="通过 0.0% / 失败 0.0% / 阻塞 100.0%">
+                <div class="progress-pass" style="width:0.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:100.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>用户角色与意图覆盖 <span class="dim-id">DIM-003</span></h3>
+                <h3><span class="dim-name">用户角色与意图覆盖</span> <code class="dim-id">DIM-003</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">0 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                    <span class="stat stat-rate low">0%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:0%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:100%"></div>
+            <div class="progress-bar" data-tooltip="通过 0.0% / 失败 0.0% / 阻塞 100.0%">
+                <div class="progress-pass" style="width:0.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:100.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>产品对比与风险等级规则覆盖 <span class="dim-id">DIM-004</span></h3>
+                <h3><span class="dim-name">产品对比与风险等级规则覆盖</span> <code class="dim-id">DIM-004</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">0 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                    <span class="stat stat-rate low">0%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:0%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:100%"></div>
+            <div class="progress-bar" data-tooltip="通过 0.0% / 失败 0.0% / 阻塞 100.0%">
+                <div class="progress-pass" style="width:0.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:100.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>输入形态与上下文覆盖 <span class="dim-id">DIM-005</span></h3>
+                <h3><span class="dim-name">输入形态与上下文覆盖</span> <code class="dim-id">DIM-005</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">0 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                    <span class="stat stat-rate low">0%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:0%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:100%"></div>
+            <div class="progress-bar" data-tooltip="通过 0.0% / 失败 0.0% / 阻塞 100.0%">
+                <div class="progress-pass" style="width:0.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:100.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
         <div class="dimension-card">
             <div class="dim-header">
-                <h3>安全与边界覆盖 <span class="dim-id">DIM-006</span></h3>
+                <h3><span class="dim-name">安全与边界覆盖</span> <code class="dim-id">DIM-006</code></h3>
                 <div class="dim-stats">
                     <span class="stat stat-pass">0 通过</span>
                     <span class="stat stat-fail">0 失败</span>
                     <span class="stat stat-blocked">0 阻塞</span>
-                    <span class="stat stat-rate" style="color:#ef4444">0%</span>
+                    <span class="stat stat-rate low">0%</span>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-pass" style="width:0%"></div>
-                <div class="progress-fail" style="width:0%"></div>
-                <div class="progress-blocked" style="width:100%"></div>
+            <div class="progress-bar" data-tooltip="通过 0.0% / 失败 0.0% / 阻塞 100.0%">
+                <div class="progress-pass" style="width:0.0%"></div>
+                <div class="progress-fail" style="width:0.0%"></div>
+                <div class="progress-blocked" style="width:100.0%"></div>
             </div>
+            <div class="table-wrap">
             <table>
                 <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>优先级</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
 
     <h2>📋 详细测试日志</h2>
     <div class="section">
+    <div class="table-wrap">
     <table>
         <thead><tr><th>用例 ID</th><th>场景</th><th>标题</th><th>用户输入</th><th>状态码</th><th>响应时间</th><th>结果</th></tr></thead>
-        <tbody><tr class="pass">
-                <td>TC-0001</td>
+        <tbody><tr class="row-pass">
+                <td><code>TC-0001</code></td>
                 <td>SC-001</td>
                 <td>精确查询存在的理财产品名称返回详细信息</td>
                 <td>查询高风险高收益的理财产品</td>
                 <td>200</td>
-                <td>62ms</td>
+                <td class="num">15ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0002</td>
+<tr class="row-pass">
+                <td><code>TC-0002</code></td>
                 <td>SC-001</td>
                 <td>精确查询产品名称包含特殊字符或空格时仍能正确匹配</td>
                 <td>查询XX-理财 产品</td>
                 <td>200</td>
-                <td>5ms</td>
+                <td class="num">6ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0003</td>
+<tr class="row-pass">
+                <td><code>TC-0003</code></td>
                 <td>SC-002</td>
                 <td>按产品类型模糊查询返回符合条件的列表</td>
                 <td>有哪些货币基金</td>
                 <td>200</td>
-                <td>4ms</td>
+                <td class="num">3ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0004</td>
+<tr class="row-pass">
+                <td><code>TC-0004</code></td>
                 <td>SC-002</td>
                 <td>按风险偏好模糊查询返回稳健型产品列表</td>
                 <td>推荐几个稳健型理财</td>
                 <td>200</td>
-                <td>4ms</td>
+                <td class="num">19ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0005</td>
+<tr class="row-pass">
+                <td><code>TC-0005</code></td>
                 <td>SC-003</td>
                 <td>查询不存在的产品名称返回未找到提示并提供建议</td>
                 <td>查询不存在的产品</td>
                 <td>200</td>
-                <td>28ms</td>
+                <td class="num">5ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
-<tr class="pass">
-                <td>TC-0006</td>
+<tr class="row-pass">
+                <td><code>TC-0006</code></td>
                 <td>SC-003</td>
                 <td>查询不存在的产品代码返回未找到提示并提供建议</td>
                 <td>查询产品代码999999</td>
                 <td>200</td>
-                <td>15ms</td>
+                <td class="num">26ms</td>
                 <td><span class="badge badge-pass">通过</span></td>
             </tr>
 </tbody>
     </table>
     </div>
+    </div>
 
     <h2>🔍 失败分析</h2>
     <div class="section">
-    <p style="padding:16px;text-align:center;color:#16a34a;font-size:16px">✅ 全部通过，无失败用例。</p>
+    <p style="padding:20px;text-align:center;color:#22c55e;font-size:16px">✅ 全部通过，无失败用例。</p>
     </div>
 
     <h2>💡 建议</h2>
     <div class="section">
-    <ul style="padding-left:20px">
+    <ul style="padding-left:20px;color:#cbd5e1;font-size:13px;line-height:2;">
         
         
-        <li>✅ 通过率 ≥ 90%，产品质量达标，建议进行下一轮回归测试。</li>
-        <li>平均响应时间 20ms，请根据业务需求评估是否需要优化。</li>
+        <li>✅ <span style="color:#22c55e">通过率 ≥ 90%</span>，产品质量达标，建议进行下一轮回归测试。</li>
+        <li>平均响应时间 <strong>12ms</strong>，请根据业务需求评估是否需要优化。</li>
     </ul>
     </div>
+
+    <div class="footer">本报告由 agent-eval-v1.1.1 generate_report.py 自动生成 · 深色玻璃态可视化</div>
 </div>
 </body>
 </html>

@@ -4,7 +4,9 @@
 
 基于 agent-eval v2.3.0-mobile-bank 演进，聚焦**用例自优化**。
 
-**v1.1.1（本次）**：在 v1.1.0 基础上完成"报告统一管理 + 执行流程进度管理 + 可视化深度优化"三件事。
+**v1.1.2（本次）**：可视化统一收尾——eval loop 深度报告（html_report.py，12 节）迁入深色玻璃态设计体系 + 门户平均分/趋势数据修复 + KPI 单行布局与数字动画 + 四处报告统一 `prefers-reduced-motion`。
+
+**v1.1.1**：在 v1.1.0 基础上完成"报告统一管理 + 执行流程进度管理 + 可视化深度优化"三件事。
 
 ## V1.1 核心创新
 
@@ -25,6 +27,8 @@
 | **【v1.1.1】报告统一门户** | 单 HTML 聚合 5 页：Overview/Reports/Progress/Iterations/Quality |
 | **【v1.1.1】进度埋点** | sidecar 持久化到 progress.jsonl，门户实时聚合 9 步时间线 |
 | **【v1.1.1】深色玻璃态可视化** | 3 处报告统一升级：渐变高亮 + 悬浮升起 + SVG 图表 + tooltip |
+| **【v1.1.2】eval 深度报告视觉统一** | html_report.py 12 节报告深色玻璃态重构：玻璃卡片 + 悬浮发光 + 入场动画 + 图表深色适配，打印仍输出浅色 |
+| **【v1.1.2】门户数据修复** | 修复 scores JSON aggregate 嵌套读取（平均分/Run 趋势恢复显示）+ KPI 单行布局 + 数字 count-up 动画 |
 
 ## 与 v2.3.0 的区别
 
@@ -62,6 +66,13 @@
 - **SVG 图表**：进度环 / sparkline / 12 维雷达 / 维度通过率条形 / 优先级堆叠柱 / 响应时间分布 / Pareto / Mutation 热力图，全部带原生 tooltip
 - **1 个 PRD**：`docs/PRD_REPORT_PORTAL.md`（含验收标准 §8）
 - **修复**：generate_report.py 的 `output_path` 未定义 bug
+
+### v1.1.2 新增（可视化统一收尾 + 数据修复）
+- **html_report.py 深色玻璃态重构**：eval loop 12 节深度报告迁入统一设计体系（玻璃卡片 + 渐变描边 + 悬浮升起/发光 + 入场动画 + 热力图/雷达/时间线深色适配 + SVG 单元格 hover 提亮），`@media print` 保留浅色打印
+- **门户数据修复**：`_load_runs_summary` 下钻 scores JSON 的 `aggregate` 嵌套字段，Overview 平均分 / Run 分数趋势 sparkline 恢复显示
+- **门户交互增强**：6 张 KPI 卡桌面端单行排布；KPI 数字 count-up 滚动动画
+- **可访问性**：4 个报告生成器统一支持 `prefers-reduced-motion`
+- **示例重生成**：`data/test_report.html` 用深色主题重新生成
 
 ## 安装
 

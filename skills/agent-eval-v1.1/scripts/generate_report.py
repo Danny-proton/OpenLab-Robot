@@ -578,6 +578,9 @@ def _render_html(data):
 <title>测试执行报告</title>
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+@media (prefers-reduced-motion: reduce) {{
+  *, *::before, *::after {{ animation: none !important; transition: none !important; }}
+}}
 body {{
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background: #0f172a;

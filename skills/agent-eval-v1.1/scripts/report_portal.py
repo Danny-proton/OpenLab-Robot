@@ -56,6 +56,9 @@ PORTAL_CSS = r"""
   --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                "Microsoft YaHei", sans-serif;
@@ -206,7 +209,7 @@ html, body {
 /* KPI grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -732,7 +735,12 @@ def _load_latest_quality(cfg: C.EvalConfig) -> dict[str, Any] | None:
 
 
 def _load_runs_summary(cfg: C.EvalConfig) -> list[dict[str, Any]]:
-    """读取 scores/*.json，提取 weighted_score 等关键字段。"""
+    """读取 scores/*.json，提取 weighted_score 等关键字段。
+
+    scorer.py 落盘的结构为 {run_id, aggregate: {weighted_score, n_cases,
+    n_hard_fail, latency_p50, ...}, per_case, weights}，关键指标嵌套在
+    aggregate 内；兼容历史扁平结构。
+    """
     out: list[dict[str, Any]] = []
     if not cfg.scores_dir.exists():
         return out
@@ -744,12 +752,13 @@ def _load_runs_summary(cfg: C.EvalConfig) -> list[dict[str, Any]]:
             d = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
             continue
-        run_id = p.stem
+        agg = d.get("aggregate") if isinstance(d.get("aggregate"), dict) else d
+        run_id = d.get("run_id") or p.stem
         out.append({
             "run_id": run_id,
-            "weighted_score": d.get("weighted_score") or d.get("weighted_total"),
-            "n_hard_fail": d.get("n_hard_fail"),
-            "n_cases": d.get("n_cases"),
+            "weighted_score": agg.get("weighted_score") or agg.get("weighted_total"),
+            "n_hard_fail": agg.get("n_hard_fail"),
+            "n_cases": agg.get("n_cases"),
             "verdict": d.get("verdict"),
             "timestamp": d.get("timestamp"),
         })
@@ -1587,8 +1596,32 @@ async function togglePreview(id, path, isMd) {
 
 function filterReports() { renderReports(); }
 
+/* KPI 数字滚动动画（尊重减少动效偏好） */
+function animateKpiValues() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.kpi-card .value').forEach(el => {
+    const raw = el.textContent.trim();
+    const m = raw.match(/^(-?\d+(?:\.\d+)?)(%?)$/);
+    if (!m) return;
+    const target = parseFloat(m[1]);
+    const suffix = m[2];
+    const decimals = (m[1].split('.')[1] || '').length;
+    const duration = 700;
+    const t0 = performance.now();
+    function tick(t) {
+      const k = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = (target * eased).toFixed(decimals) + suffix;
+      if (k < 1) requestAnimationFrame(tick);
+      else el.textContent = raw;
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   renderReports();
+  animateKpiValues();
 });
 """
 

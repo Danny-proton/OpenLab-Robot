@@ -229,6 +229,9 @@ def render_md(proposal: dict, iterations: list[dict]) -> str:
 
 HTML_STYLE = """
 <style>
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     max-width: 1240px; margin: 0 auto; padding: 24px;

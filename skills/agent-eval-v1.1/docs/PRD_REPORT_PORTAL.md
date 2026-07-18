@@ -243,15 +243,22 @@ python progress_tracker.py --config .agent-eval/config.yaml summary
 
 ## 8. 验收标准
 
-- [ ] `progress_tracker.py emit` 落盘到 `data/progress.jsonl`，`list/latest/timeline/summary` 查询正确
-- [ ] `sidecar.py --persist`（默认）调 progress_tracker 落盘；`--no-persist` 不落盘；stdout JSON 不变
-- [ ] `report_portal.py` 生成单文件 `portal.html`，5 个页面均可切换，数据正确
-- [ ] 门户 Reports 页检索/过滤/分类/预览均可用，hover 动效生效
-- [ ] 门户 Progress 页进度环、阶段时间线、耗时条形图正确渲染，hover tooltip 生效
-- [ ] `generate_report.py` 修复 `output_path` bug，HTML 升级到深色玻璃态 + hover 动效 + 维度图表
-- [ ] `case_iteration_report.py` HTML 升级，新增质量分对比图 + mutation 热力图 + Pareto 图
-- [ ] 端到端：mock 系统跑一轮 → 门户能同时展示报告 + 进度 + 迭代 + 质量
-- [ ] 零外部依赖：portal.html 本地双击可打开
+- [x] `progress_tracker.py emit` 落盘到 `data/progress.jsonl`，`list/latest/timeline/summary` 查询正确
+- [x] `sidecar.py --persist`（默认）调 progress_tracker 落盘；`--no-persist` 不落盘；stdout JSON 不变
+- [x] `report_portal.py` 生成单文件 `portal.html`，5 个页面均可切换，数据正确
+- [x] 门户 Reports 页检索/过滤/分类/预览均可用，hover 动效生效
+- [x] 门户 Progress 页进度环、阶段时间线、耗时条形图正确渲染，hover tooltip 生效
+- [x] `generate_report.py` 修复 `output_path` bug，HTML 升级到深色玻璃态 + hover 动效 + 维度图表
+- [x] `case_iteration_report.py` HTML 升级，新增质量分对比图 + mutation 热力图 + Pareto 图
+- [x] 端到端：mock 系统跑一轮 → 门户能同时展示报告 + 进度 + 迭代 + 质量
+- [x] 零外部依赖：portal.html 本地双击可打开
+
+**v1.1.2 追加验收（2026-07-18 实测通过）：**
+
+- [x] `html_report.py` 深色玻璃态重构：12 节报告与门户视觉统一，独立模式 + baseline 对比模式均正常
+- [x] 门户 Overview 平均分 / Run 分数趋势恢复显示（`_load_runs_summary` 下钻 `aggregate` 嵌套）
+- [x] 6 张 KPI 卡桌面端单行排布；KPI 数字 count-up 动画（非数字值跳过）
+- [x] 4 个报告生成器统一支持 `prefers-reduced-motion`
 
 ## 9. 与现有能力的关系
 
@@ -268,5 +275,6 @@ python progress_tracker.py --config .agent-eval/config.yaml summary
 
 | 版本 | 内容 | 状态 |
 |------|------|------|
-| v1.1.1 | progress_tracker + sidecar 改造 + report_portal + 两份报告可视化重构 | 本次开发 |
-| v1.1.2 | 门户支持报告在线 diff（before/after cases）、进度实时刷新（轮询） | 待规划 |
+| v1.1.1 | progress_tracker + sidecar 改造 + report_portal + 两份报告可视化重构 | ✅ 已发布 |
+| v1.1.2 | html_report 深色玻璃态重构 + 门户数据修复 + KPI 布局/动画 + reduced-motion | ✅ 已发布 |
+| v1.1.3 | 门户支持报告在线 diff（before/after cases）、进度实时刷新（轮询） | 待规划 |
