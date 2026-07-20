@@ -34,6 +34,7 @@ import type { ProviderPreset } from '../types/providerPreset'
 // Openlab Robot: IM 适配器入口已停用（如需恢复，取消下行及选项卡处的注释）
 // import { AdapterSettings } from './AdapterSettings'
 import { KernelSettings } from '../components/settings/KernelSettings'
+import { BrandSettings } from '../components/settings/BrandSettings'
 import { useAgentStore } from '../stores/agentStore'
 import { useSessionStore } from '../stores/sessionStore'
 import type { AgentDefinition, AgentSource } from '../api/agents'
@@ -220,6 +221,7 @@ export function Settings() {
           <div className="flex-1">
             <TabButton icon="dns" label={t('settings.tab.providers')} active={activeTab === 'providers'} onClick={() => setActiveTab('providers')} />
             <TabButton icon="memory" label={t('settings.tab.kernel')} active={activeTab === 'kernel'} onClick={() => setActiveTab('kernel')} />
+            <TabButton icon="palette" label={t('settings.tab.brand')} active={activeTab === 'brand'} onClick={() => setActiveTab('brand')} />
             <TabButton icon="tune" label={t('settings.tab.general')} active={activeTab === 'general'} onClick={() => setActiveTab('general')} />
             <TabButton icon="qr_code_2" label={t('settings.tab.h5Access')} active={activeTab === 'h5Access'} onClick={() => setActiveTab('h5Access')} />
             {/* Openlab Robot: IM 适配器入口已停用
@@ -245,6 +247,7 @@ export function Settings() {
         <div className={activeTab === 'trace' ? 'flex-1 flex min-h-0 flex-col overflow-hidden' : 'flex-1 overflow-y-auto px-8 py-6'}>
           {activeTab === 'providers' && <ProviderSettings />}
           {activeTab === 'kernel' && <KernelSettings />}
+          {activeTab === 'brand' && <BrandSettings />}
           {activeTab === 'activity' && <ActivitySettings />}
           {activeTab === 'general' && <GeneralSettings />}
           {activeTab === 'h5Access' && <H5AccessSettings />}

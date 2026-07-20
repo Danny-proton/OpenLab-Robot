@@ -8,14 +8,16 @@
 
 | 项 | 值 |
 |---|---|
-| 软件名（用户可见） | **Openlab Robot** |
-| 可选内核 | `cc-haha`（默认）、`jiuwen-Agent-core` |
-| 主启动命令 | `openlab-robot`（cc-haha 内核） |
+| 软件名（用户可见，可在设置中自定义） | **Openlab Robot**（默认） |
+| 内核显示名 | **Claude Code 安全修复版**（默认，内部 id `cc-haha`）、`jiuwen-Agent-core` |
+| 页面上的 cc-haha 字样 | **不允许出现**（技术性存储键名除外） |
+| 主启动命令 | `openlab-robot`（默认内核） |
 | jiuwen 内核启动命令 | `jiuwen`（启动 vendor/jiuwenswarm 的 TUI） |
 | appId / identifier | `com.openlab.robot` |
 | 安装包文件名 | `Openlab-Robot-${version}-${os}-${arch}.${ext}` |
 | 目标仓库 | https://gitee.com/HongKongJournalist/OpenLab-Robot |
 | 外部文档链接 | https://atomgit.com/openJiuwen/jiuwenswarm |
+| 品牌定制配置 | `~/.openlab-robot/brand.json`（appName/agentName/chatPlaceholder/systemPromptOverride） |
 
 ## 一、机械替换（脚本自动完成）
 
@@ -46,9 +48,32 @@ TUI 欢迎语、system prompt 身份、外部链接 → jiuwen。
          支持 `configDir` 自定义覆盖）。
    - [ ] `src/server/api/kernel.ts` + `src/server/router.ts` 注册 `kernel` 路由。
    - [ ] `src/utils/envUtils.ts` 的 `getClaudeConfigHomeDir` 回退到
-         `getKernelDefaultConfigDir()`（而非硬编码 `~/.claude`）。
-   - [ ] 桌面端 `desktop/src/components/settings/KernelSettings.tsx`、
-         `desktop/src/api/kernel.ts` 存在；设置页有「内核」选项卡。
+         `getKernelDefaultConfigDir()`（而非硬编码 `~/.claude`），
+         且内核目录按 mtime+TTL 缓存（防止热路径频繁读盘导致卡顿）。
+   - [ ] 桌面端 `desktop/src/components/settings/KernelSettings.tsx`（乐观更新）、
+         `desktop/src/api/kernel.ts` 存在；设置页有「内核」选项卡；
+         内核显示名为「Claude Code 安全修复版」（界面不得出现 cc-haha 字样）。
+   - [ ] `src/components/LogoV2/KernelHint.tsx` 存在并在 `LogoV2.tsx`
+         两种布局的返回 fragment 中渲染（提示 jiuwen 内核换用 `jiuwen` 命令）。
+
+2.5 **品牌定制机制（Openlab Robot 核心能力）**
+   - [ ] `src/utils/brandConfig.ts`（共享读取层）与
+         `src/server/services/brandService.ts`、`src/server/api/brand.ts` 存在，
+         路由注册 `brand`。
+   - [ ] 系统提示词身份可定制：`src/constants/system.ts` 的
+         `getCLISyspromptPrefix` 优先使用 `systemPromptOverride`；
+         `src/constants/prompts.ts` 使用 `getBrandSystemPromptPrefix()` /
+         `getDefaultAgentPrompt()`。
+   - [ ] 桌面端 `desktop/src/stores/brandStore.ts`：`applyBrand()` 替换引擎
+         （Claude Code Haha→appName、Claude Code→appName、单独 Claude→agentName、
+         ~/.claude→内核生效目录；保护「Claude Code 安全修复版」短语），
+         `translate()` 与 `useTranslation()` 已接入。
+   - [ ] 设置页有「品牌定制」选项卡（BrandSettings），可编辑
+         应用名/智能体名/对话框占位提示/系统提示词。
+   - [ ] `ChatInput.tsx` 占位提示优先使用 `chatPlaceholder` 定制值。
+   - [ ] 侧边栏标题、通知标题（chatStore）使用 `appName`。
+   - [ ] 终端页 `TerminalKernelGuide`（按内核显示不同引导 + 流动边框动画），
+         TerminalSettings 激活/spawn 后自动 `terminal.focus()`。
 
 3. **界面**
    - [ ] `desktop/src/pages/Settings.tsx`：IM 适配器选项卡与内容保持注释停用；
@@ -62,17 +87,20 @@ TUI 欢迎语、system prompt 身份、外部链接 → jiuwen。
    - [ ] `BUILT_IN_PROVIDER_IDS` 为空数组（隐藏内置官方供应商，仅 custom）。
    - [ ] `desktop/src/components/onboarding/FirstRunModelModal.tsx` 存在，
          且 `desktop/src/App.tsx` 中已挂载（首次使用弹出配置 custom 模型提示）。
-   - [ ] `src/components/LogoV2/KernelHint.tsx` 存在并在 `LogoV2.tsx`
-         两种布局的返回 fragment 中渲染。
+   - [ ] `desktop/src/App.tsx` 启动时调用 `useBrandStore.getState().fetchBrand()`。
 
 4. **i18n 新增 key**（上游重写 locale 文件后需补回）
    - [ ] `settings.tab.kernel`、`settings.kernel.*`（14 个）、
-         `settings.firstRun.*`（4 个）、`settings.about.ackCchaha`
+         `settings.firstRun.*`（4 个）、`settings.about.ackCchaha`、
+         `settings.tab.brand`、`settings.brand.*`（13 个）
          —— 五个 locale（en / zh / zh-TW / jp / kr）都要有。
+   - [ ] 页面文案不得出现 cc-haha 字样（诊断页列出的真实 localStorage
+         键名除外，那是功能性内容）。
 
 5. **文档与致谢**
    - [ ] `ACKNOWLEDGEMENTS.md` 保留对 cc-haha（Claude Code 安全内核复现）
-         与 jiuwenSwarm 的致谢。
+         与 jiuwenSwarm 的致谢（仓库级致谢保留；页面文案用「Claude Code
+         安全修复版」指代默认内核，不出现 cc-haha）。
    - [ ] docs/、release-notes/ 不改动（按需求保持上游原文）。
 
 ## 三、保持不变项（切勿"顺手优化"）

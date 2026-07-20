@@ -156,11 +156,11 @@ describe('GeneralSettings output style', () => {
 
     render(<GeneralSettings />)
 
-    expect(await screen.findByText('Claude 会高效完成编码任务，并提供简洁回复')).toBeInTheDocument()
+    expect(await screen.findByText('Openlab Robot 会高效完成编码任务，并提供简洁回复')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '选择输出风格' }))
 
-    expect(screen.getByText('Claude 会暂停并请你编写小段代码进行实战练习 · 内置')).toBeInTheDocument()
+    expect(screen.getByText('Openlab Robot 会暂停并请你编写小段代码进行实战练习 · 内置')).toBeInTheDocument()
     expect(screen.getByText('Project custom voice · 项目风格')).toBeInTheDocument()
     expect(screen.queryByText(/Claude completes coding tasks efficiently/)).not.toBeInTheDocument()
   })

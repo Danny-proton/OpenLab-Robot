@@ -1,28 +1,57 @@
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { join } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, statSync } from 'fs'
 
 /**
  * Openlab Robot 内核感知配置目录：
  * CLAUDE_CONFIG_DIR 环境变量优先级最高（机制不变）；未设置时读取
  * ~/.openlab-robot/kernel.json，按当前内核返回默认目录（cc-haha → ~/.claude，
  * jiuwen-agent-core → ~/.jiuwenswarm），用户自定义 configDir 优先于内核默认。
+ *
+ * 注意：该函数被 memoize 的 key 函数频繁调用（150+ 调用方），因此按文件
+ * mtime 缓存解析结果，避免每次调用都同步读盘。
  */
+let kernelDirCache: { mtimeMs: number; dir: string; checkedAt: number } | null = null
+const KERNEL_DIR_CACHE_TTL_MS = 2000
+
 function getKernelDefaultConfigDir(): string {
+  const now = Date.now()
+  if (kernelDirCache && now - kernelDirCache.checkedAt < KERNEL_DIR_CACHE_TTL_MS) {
+    return kernelDirCache.dir
+  }
+  const kernelFile = join(homedir(), '.openlab-robot', 'kernel.json')
+  let mtimeMs = 0
   try {
-    const raw = readFileSync(join(homedir(), '.openlab-robot', 'kernel.json'), 'utf-8')
+    mtimeMs = statSync(kernelFile).mtimeMs
+  } catch {
+    // 文件不存在：仅当缓存也是“不存在”状态时复用，否则按默认处理
+    if (kernelDirCache && kernelDirCache.mtimeMs === 0) {
+      kernelDirCache.checkedAt = now
+      return kernelDirCache.dir
+    }
+    const dir = join(homedir(), '.claude')
+    kernelDirCache = { mtimeMs: 0, dir, checkedAt: now }
+    return dir
+  }
+  if (kernelDirCache && kernelDirCache.mtimeMs === mtimeMs) {
+    kernelDirCache.checkedAt = now
+    return kernelDirCache.dir
+  }
+  let dir = join(homedir(), '.claude')
+  try {
+    const raw = readFileSync(kernelFile, 'utf-8')
     const parsed = JSON.parse(raw) as { kernel?: string; configDir?: string }
     if (typeof parsed.configDir === 'string' && parsed.configDir.trim()) {
-      return parsed.configDir.trim()
-    }
-    if (parsed.kernel === 'jiuwen-agent-core') {
-      return join(homedir(), '.jiuwenswarm')
+      dir = parsed.configDir.trim()
+    } else if (parsed.kernel === 'jiuwen-agent-core') {
+      dir = join(homedir(), '.jiuwenswarm')
     }
   } catch {
-    // 内核配置不存在或不可读时回退到 cc-haha 默认目录
+    // 解析失败时回退到 cc-haha 默认目录
   }
-  return join(homedir(), '.claude')
+  kernelDirCache = { mtimeMs, dir, checkedAt: now }
+  return dir
 }
 
 // Memoized: 150+ callers, many on hot paths. Keyed off CLAUDE_CONFIG_DIR so

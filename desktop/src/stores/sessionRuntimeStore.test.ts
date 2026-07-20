@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionListItem } from '../types/session'
 import { useSessionRuntimeStore } from './sessionRuntimeStore'
 
+// Openlab Robot: 内置 Grok 官方模型目录已清空，退役模型回退到默认 ID 时
+// 不再附带推理强度（无目录可查 defaultReasoningEffort）
 const EXPECTED_GROK_SELECTION = {
   providerId: 'grok-official',
   modelId: 'grok-4.5',
-  effortLevel: 'high',
 }
 
 describe('sessionRuntimeStore Grok runtime cleanup', () => {

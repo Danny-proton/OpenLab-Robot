@@ -6,6 +6,7 @@ import { getCwd } from '../utils/cwd.js'
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { getCurrentWorktreeSession } from '../utils/worktree.js'
 import { getSessionStartDate } from './common.js'
+import { getBrandSystemPromptPrefix, getBrandAgentName } from '../utils/brandConfig.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 import {
   AGENT_TOOL_NAME,
@@ -449,7 +450,7 @@ export async function getSystemPrompt(
 ): Promise<string[]> {
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     return [
-      `You are Openlab Robot, an AI coding assistant.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
+      `${getBrandSystemPromptPrefix()}\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
     ]
   }
 
@@ -755,7 +756,13 @@ export function getUnameSR(): string {
   return `${osType()} ${osRelease()}`
 }
 
-export const DEFAULT_AGENT_PROMPT = `You are an agent for Openlab Robot, an AI coding assistant. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done. When you complete the task, respond with a concise report covering what was done and any key findings — the caller will relay this to the user, so it only needs the essentials.`
+// Openlab Robot：子智能体提示词同样跟随品牌定制（agentName 可变）
+export function getDefaultAgentPrompt(): string {
+  return `You are an agent for ${getBrandAgentName()}, an AI coding assistant. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done. When you complete the task, respond with a concise report covering what was done and any key findings — the caller will relay this to the user, so it only needs the essentials.`
+}
+
+/** @deprecated 使用 getDefaultAgentPrompt() 以跟随品牌定制 */
+export const DEFAULT_AGENT_PROMPT = getDefaultAgentPrompt()
 
 export async function enhanceSystemPromptWithEnvDetails(
   existingSystemPrompt: string[],

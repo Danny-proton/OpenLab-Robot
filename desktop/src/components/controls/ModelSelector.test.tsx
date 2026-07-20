@@ -531,10 +531,10 @@ describe('ModelSelector', () => {
     expect(screen.queryByText('grok-build')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Grok 4.5, Grok Official' })).toBeInTheDocument()
     await waitFor(() => {
+      // Openlab Robot: 内置模型目录已清空，回退默认模型时不再附带推理强度
       expect(useSessionRuntimeStore.getState().selections['session-stale-grok']).toEqual({
         providerId: 'grok-official',
         modelId: 'grok-4.5',
-        effortLevel: 'high',
       })
     })
   })

@@ -7,6 +7,7 @@ const ACTIVE_SETTINGS_TAB_STORAGE_KEY = 'cc-haha-active-settings-tab'
 const SETTINGS_TABS = [
   'providers',
   'kernel',
+  'brand',
   'activity',
   'general',
   'h5Access',
@@ -63,6 +64,7 @@ export type Toast = {
 export type SettingsTab =
   | 'providers'
   | 'kernel'
+  | 'brand'
   | 'activity'
   | 'general'
   | 'h5Access'

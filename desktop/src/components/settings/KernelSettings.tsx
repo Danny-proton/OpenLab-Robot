@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n'
 import type { TranslationKey } from '../../i18n/locales/en'
 
 const KERNEL_OPTIONS: { id: KernelId; label: string; descKey: TranslationKey }[] = [
-  { id: 'cc-haha', label: 'cc-haha', descKey: 'settings.kernel.ccHahaDesc' },
+  { id: 'cc-haha', label: 'Claude Code 安全修复版', descKey: 'settings.kernel.ccHahaDesc' },
   { id: 'jiuwen-agent-core', label: 'jiuwen-Agent-core', descKey: 'settings.kernel.jiuwenDesc' },
 ]
 
@@ -12,7 +12,6 @@ export function KernelSettings() {
   const t = useTranslation()
   const [info, setInfo] = useState<KernelInfo | null>(null)
   const [configDirDraft, setConfigDirDraft] = useState('')
-  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -30,7 +29,10 @@ export function KernelSettings() {
   }, [load])
 
   const save = async (update: { kernel?: KernelId; configDir?: string }) => {
-    setSaving(true)
+    // 乐观更新：先切换界面状态，后台同步服务端，避免切换时的等待感
+    if (update.kernel && info) {
+      setInfo({ ...info, kernel: update.kernel })
+    }
     setMessage(null)
     try {
       const data = await kernelApi.update(update)
@@ -39,8 +41,7 @@ export function KernelSettings() {
       setMessage(t('settings.kernel.saved'))
     } catch (err) {
       setMessage(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
+      void load() // 失败时回滚到服务端状态
     }
   }
 
@@ -61,7 +62,6 @@ export function KernelSettings() {
           return (
             <button
               key={option.id}
-              disabled={saving}
               onClick={() => void save({ kernel: option.id })}
               className={`text-left rounded-lg border px-4 py-3 transition-colors ${
                 active
@@ -93,7 +93,6 @@ export function KernelSettings() {
             className="flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm text-[var(--color-text-primary)]"
           />
           <button
-            disabled={saving}
             onClick={() => void save({ configDir: configDirDraft })}
             className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm text-white disabled:opacity-50"
           >

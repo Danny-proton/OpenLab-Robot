@@ -7,9 +7,12 @@ description: Openlab Robot 品牌改造与上游同步。当需要把 cc-haha（
 
 ## 品牌基线
 
-- 软件名（用户可见）：**Openlab Robot**；appId `com.openlab.robot`
-- 内核：`cc-haha`（默认）、`jiuwen-Agent-core`（vendor/jiuwenswarm）
-- 启动命令：`openlab-robot`（cc-haha 内核）、`jiuwen`（jiuwen 内核）
+- 软件名（用户可见，可在设置→品牌定制中自定义）：**Openlab Robot**（默认）；appId `com.openlab.robot`
+- 内核显示名：**Claude Code 安全修复版**（默认，内部 id `cc-haha`）、`jiuwen-Agent-core`（vendor/jiuwenswarm）
+- 页面不得出现 cc-haha 字样（诊断页真实存储键名除外）
+- 启动命令：`openlab-robot`（默认内核）、`jiuwen`（jiuwen 内核）
+- 品牌定制：`~/.openlab-robot/brand.json` 驱动（appName/agentName/chatPlaceholder/systemPromptOverride），
+  界面文案经 brandStore.applyBrand 实时替换，系统提示词经 brandConfig 读取
 - 仓库：https://gitee.com/HongKongJournalist/OpenLab-Robot
 - 外部链接一律指向 jiuwen：https://atomgit.com/openJiuwen/jiuwenswarm
 - 环境变量名（CLAUDE_*/CC_HAHA_*/ANTHROPIC_*）、docs/、release-notes/ 不改

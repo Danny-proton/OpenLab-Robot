@@ -1,5 +1,6 @@
 import { useUIStore } from '../../stores/uiStore'
 import { useTranslation } from '../../i18n'
+import { useBrandStore } from '../../stores/brandStore'
 
 export function TitleBar() {
   const { activeView, setActiveView } = useUIStore()
@@ -15,7 +16,7 @@ export function TitleBar() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 mr-4" data-desktop-drag-region>
-        <span className="text-xs font-bold tracking-wider text-[var(--color-brand)] uppercase">Claude Code Companion</span>
+        <span className="text-xs font-bold tracking-wider text-[var(--color-brand)] uppercase">{useBrandStore.getState().appName}</span>
       </div>
 
       {/* Navigation arrows */}

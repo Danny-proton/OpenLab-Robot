@@ -6,6 +6,7 @@ import { isEnvDefinedFalsy } from '../utils/envUtils.js'
 import { getAPIProvider } from '../utils/model/providers.js'
 import { getWorkload } from '../utils/workloadContext.js'
 import { formatClaudeCodeBillingHeader } from './claudeCodeCompatibility.js'
+import { getBrandConfig } from '../utils/brandConfig.js'
 
 const DEFAULT_PREFIX = `You are Openlab Robot, an AI coding assistant.`
 const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are Openlab Robot, an AI coding assistant, running within the Openlab Agent SDK.`
@@ -31,6 +32,13 @@ export function getCLISyspromptPrefix(options?: {
   isNonInteractive: boolean
   hasAppendSystemPrompt: boolean
 }): CLISyspromptPrefix {
+  // Openlab Robot：系统提示词身份支持用户在「设置 → 品牌定制」中自定义
+  // （~/.openlab-robot/brand.json 的 systemPromptOverride），优先于内置身份。
+  const brandOverride = getBrandConfig().systemPromptOverride
+  if (brandOverride && brandOverride.trim()) {
+    return brandOverride.trim() as CLISyspromptPrefix
+  }
+
   const apiProvider = getAPIProvider()
   if (apiProvider === 'vertex') {
     return DEFAULT_PREFIX

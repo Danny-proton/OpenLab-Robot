@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from '../../i18n'
 import { useChatStore } from '../../stores/chatStore'
+import { useBrandStore } from '../../stores/brandStore'
 import { SETTINGS_TAB_ID, useTabStore } from '../../stores/tabStore'
 import { useUIStore } from '../../stores/uiStore'
 import { useSessionStore } from '../../stores/sessionStore'
@@ -965,6 +966,8 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
     })
   }
 
+  // Openlab Robot 品牌定制：对话框占位提示可单独设置（设置 → 品牌定制）
+  const brandChatPlaceholder = useBrandStore((s) => s.chatPlaceholder)
   const composerPlaceholder =
     isHeroComposer
       ? t('empty.placeholder')
@@ -974,7 +977,7 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
           : t('chat.placeholderMissing')
         : isMemberSession
           ? t('teams.memberPlaceholder')
-          : t('chat.placeholder')
+          : (brandChatPlaceholder ?? t('chat.placeholder'))
 
   const addFilesLabel = isHeroComposer ? t('empty.addFiles') : t('chat.addFiles')
   const slashCommandsLabel = isHeroComposer ? t('empty.slashCommands') : t('chat.slashCommands')

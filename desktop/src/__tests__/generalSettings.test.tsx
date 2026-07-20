@@ -919,7 +919,7 @@ describe('Settings > General tab', () => {
       expect(desktopNotificationsMock.requestDesktopNotificationPermission).toHaveBeenCalledTimes(1)
     })
     expect(desktopNotificationsMock.notifyDesktop).toHaveBeenCalledWith({
-      title: 'Claude Code Haha notifications are enabled',
+      title: 'Openlab Robot notifications are enabled',
       body: 'Permission prompts and completed agent replies will now use system notifications.',
     })
   })
@@ -1600,43 +1600,40 @@ describe('Settings > Providers tab', () => {
     expect(screen.queryByTestId('chatgpt-official-login')).not.toBeInTheDocument()
   })
 
-  it('shows official OAuth status only after official provider is confirmed active', () => {
+  // Openlab Robot: 内置官方供应商已停用（BUILT_IN_PROVIDER_IDS 为空），
+  // 官方登录卡片与官方 provider 卡片均不再渲染
+  it('does not render official login cards (built-in providers disabled)', () => {
     providerStoreState.providers = []
     providerStoreState.activeId = null
     providerStoreState.hasLoadedProviders = true
 
     render(<Settings />)
 
-    expect(screen.getByTestId('claude-official-login')).toBeInTheDocument()
+    expect(screen.queryByTestId('claude-official-login')).not.toBeInTheDocument()
   })
 
-  it('shows ChatGPT Official as the active built-in provider', () => {
+  it('does not render built-in ChatGPT Official provider (disabled)', () => {
     providerStoreState.providers = []
     providerStoreState.activeId = 'openai-official'
     providerStoreState.hasLoadedProviders = true
 
     render(<Settings />)
 
-    const openAIProvider = screen.getByTestId('openai-official-provider')
-    expect(within(openAIProvider).getByText('ChatGPT Official')).toBeInTheDocument()
-    expect(within(openAIProvider).getByText('Default')).toBeInTheDocument()
-    expect(screen.getByTestId('chatgpt-official-login')).toBeInTheDocument()
-    expect(screen.queryByTestId('claude-official-login')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('openai-official-provider')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('chatgpt-official-login')).not.toBeInTheDocument()
   })
 
-  it('shows Grok Official as the active built-in provider', () => {
+  it('does not render built-in Grok Official provider (disabled)', () => {
     providerStoreState.providers = []
     providerStoreState.activeId = 'grok-official'
 
     render(<Settings />)
 
-    const provider = screen.getByTestId('grok-official-provider')
-    expect(within(provider).getByText('Grok Official')).toBeInTheDocument()
-    expect(within(provider).getByText('Default')).toBeInTheDocument()
-    expect(screen.getByTestId('grok-official-login')).toBeInTheDocument()
+    expect(screen.queryByTestId('grok-official-provider')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('grok-official-login')).not.toBeInTheDocument()
   })
 
-  it('renders saved and official providers in the stored sortable order', () => {
+  it('renders only saved providers in the stored sortable order', () => {
     providerStoreState.providerOrder = ['provider-1', 'openai-official', 'claude-official']
 
     render(<Settings />)
@@ -1645,9 +1642,6 @@ describe('Settings > Providers tab', () => {
       .map((handle) => handle.closest('[data-testid]')?.getAttribute('data-testid'))
     expect(rows).toEqual([
       'provider-provider-1',
-      'openai-official-provider',
-      'claude-official-provider',
-      'grok-official-provider',
     ])
   })
 
@@ -1660,9 +1654,6 @@ describe('Settings > Providers tab', () => {
       .map((handle) => handle.closest('[data-testid]')?.getAttribute('data-testid'))
     expect(rows).toEqual([
       'provider-provider-1',
-      'claude-official-provider',
-      'openai-official-provider',
-      'grok-official-provider',
     ])
   })
 

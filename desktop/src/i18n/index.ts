@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useBrandStore, applyBrand } from '../stores/brandStore'
 import { en, type TranslationKey } from './locales/en'
 import { zh } from './locales/zh'
 import { zh as zhTW } from './locales/zh-TW'
@@ -35,7 +36,8 @@ export function translate(
       text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
     }
   }
-  return text
+  // Openlab Robot 品牌定制：翻译结果统一经过品牌替换引擎
+  return applyBrand(text)
 }
 
 /**
@@ -48,10 +50,13 @@ export function translate(
  */
 export function useTranslation() {
   const locale = useSettingsStore((s) => s.locale)
+  // 订阅品牌定制变化，appName/agentName 更新后所有文案自动刷新
+  const appName = useBrandStore((s) => s.appName)
+  const agentName = useBrandStore((s) => s.agentName)
   return useCallback(
     (key: TranslationKey, params?: Record<string, string | number>) =>
       translate(locale, key, params),
-    [locale],
+    [locale, appName, agentName],
   )
 }
 

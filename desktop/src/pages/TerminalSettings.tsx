@@ -8,6 +8,7 @@ import { Input } from '../components/shared/Input'
 import { Button } from '../components/shared/Button'
 import type { DesktopTerminalStartupShell } from '../types/settings'
 import { getDesktopHost } from '../lib/desktopHost'
+import { TerminalKernelGuide } from '../components/terminal/TerminalKernelGuide'
 import {
   attachTerminalRuntime,
   createLocalTerminalRuntimeId,
@@ -310,6 +311,8 @@ export function TerminalSettings({
           status: 'running',
         })
         resizeSession()
+        // spawn 成功后立即聚焦，保证打开终端页即可输入
+        activeTerminal.focus()
       } catch (err) {
         outputUnlisten?.()
         exitUnlisten?.()
@@ -363,9 +366,13 @@ export function TerminalSettings({
 
   useEffect(() => {
     if (active) {
-      requestAnimationFrame(() => resizeSession())
+      requestAnimationFrame(() => {
+        resizeSession()
+        // 修复终端页打开后无法直接输入：激活时主动让 xterm 获得焦点
+        runtime.terminal?.focus()
+      })
     }
-  }, [active, resizeSession])
+  }, [active, resizeSession, runtime])
 
   const clearTerminal = () => {
     runtime.terminal?.clear()
@@ -595,6 +602,8 @@ export function TerminalSettings({
           <BashPathSettings isTauri={terminalApi.isAvailable()} />
         </>
       )}
+
+      {workspace && <TerminalKernelGuide />}
 
       {status === 'unavailable' ? (
         <div className="flex flex-1 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-8 text-center">

@@ -245,25 +245,27 @@ describe('providerStore reorderProviders', () => {
     expect(useProviderStore.getState().providers.map((p) => p.id)).toEqual(['c', 'a', 'b'])
   })
 
-  it('optimistically applies full display order including built-in providers', async () => {
+  // Openlab Robot: 内置官方供应商已停用（BUILT_IN_PROVIDER_IDS 为空），
+  // 展示顺序只包含用户保存的 custom 供应商
+  it('optimistically applies full display order of saved providers', async () => {
     const a = makeProvider({ id: 'a', name: 'A' })
     const b = makeProvider({ id: 'b', name: 'B' })
     providersApiMock.reorder.mockResolvedValue({
       providers: [b, a],
-      providerOrder: ['openai-official', 'b', 'claude-official', 'a', 'grok-official'],
+      providerOrder: ['b', 'a'],
     })
 
     const { useProviderStore } = await import('./providerStore')
     useProviderStore.setState({
       providers: [a, b],
-      providerOrder: ['a', 'b', 'claude-official', 'openai-official', 'grok-official'],
+      providerOrder: ['a', 'b'],
       activeId: null,
     })
 
-    await useProviderStore.getState().reorderProviders(['openai-official', 'b', 'claude-official', 'a', 'grok-official'])
+    await useProviderStore.getState().reorderProviders(['b', 'a'])
 
-    expect(providersApiMock.reorder).toHaveBeenCalledWith(['openai-official', 'b', 'claude-official', 'a', 'grok-official'])
-    expect(useProviderStore.getState().providerOrder).toEqual(['openai-official', 'b', 'claude-official', 'a', 'grok-official'])
+    expect(providersApiMock.reorder).toHaveBeenCalledWith(['b', 'a'])
+    expect(useProviderStore.getState().providerOrder).toEqual(['b', 'a'])
     expect(useProviderStore.getState().providers.map((p) => p.id)).toEqual(['b', 'a'])
   })
 
