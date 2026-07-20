@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Openlab Robot 主启动命令（默认 cc-haha 内核）。
+# 内核可在 设置 → 内核 中切换；使用 jiuwen-Agent-core 内核时请改用 `jiuwen` 命令启动。
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+#Get your current working directory and export it as an environment variable.
+export CALLER_DIR="${CALLER_DIR:-$(pwd -W 2>/dev/null || pwd)}"
+
+cd "$ROOT_DIR"
+
+# ─── 内核感知：读取内核配置，配置目录跟随内核切换（环境变量机制不变）─────────
+# 内核配置文件：~/.openlab-robot/kernel.json
+#   { "kernel": "cc-haha" | "jiuwen-agent-core", "configDir": "/custom/path" (可选) }
+KERNEL_FILE="${HOME:-}/.openlab-robot/kernel.json"
+if [[ -f "$KERNEL_FILE" ]]; then
+  KERNEL_NAME="$(sed -n 's/.*"kernel"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$KERNEL_FILE" | head -n1)"
+  KERNEL_CONFIG_DIR="$(sed -n 's/.*"configDir"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$KERNEL_FILE" | head -n1)"
+  if [[ -n "${KERNEL_CONFIG_DIR:-}" ]]; then
+    export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$KERNEL_CONFIG_DIR}"
+  elif [[ "${KERNEL_NAME:-}" == "jiuwen-agent-core" ]]; then
+    export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.jiuwenswarm}"
+    echo "[Openlab Robot] 当前内核为 jiuwen-Agent-core，建议使用 \`jiuwen\` 命令启动以获得完整的蜂群协作体验。" >&2
+  fi
+fi
+
+# When spawned by the desktop/web server as a child CLI process,
+# skip .env loading — the server has already set the correct env
+# via cc-haha/settings.json. Loading .env would re-inject stale
+# provider keys (e.g., a MiniMax key as ANTHROPIC_API_KEY) that
+# override the active provider config.
+if [[ "${CC_HAHA_SKIP_DOTENV:-0}" == "1" ]]; then
+  # Bun auto-loads .env by default; explicitly point to /dev/null to suppress.
+  ENV_FILE_FLAG="--env-file=/dev/null"
+elif [[ -f .env ]]; then
+  ENV_FILE_FLAG="--env-file=.env"
+else
+  ENV_FILE_FLAG=""
+fi
+
+# Force recovery CLI (simple readline REPL, no Ink TUI)
+if [[ "${CLAUDE_CODE_FORCE_RECOVERY_CLI:-0}" == "1" ]]; then
+  exec bun --feature=TRANSCRIPT_CLASSIFIER $ENV_FILE_FLAG ./src/localRecoveryCli.ts "$@"
+fi
+
+# Default: full CLI with Ink TUI
+exec bun --feature=TRANSCRIPT_CLASSIFIER $ENV_FILE_FLAG ./src/entrypoints/cli.tsx "$@"

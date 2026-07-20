@@ -231,7 +231,26 @@ export const zh: Record<TranslationKey, string> = {
 
   // ─── Settings ──────────────────────────────────────
   'settings.title': '设置',
-  'settings.tab.providers': '服务商',
+  'settings.tab.providers': '大模型',
+  'settings.tab.kernel': '内核',
+  'settings.kernel.title': '内核',
+  'settings.kernel.subtitle': '选择 Openlab Robot 使用的 Agent 内核，默认配置目录会跟随内核切换。',
+  'settings.kernel.active': '使用中',
+  'settings.kernel.saved': '已保存。',
+  'settings.kernel.loading': '加载中…',
+  'settings.kernel.save': '保存',
+  'settings.kernel.ccHahaDesc': '默认内核，本地编码 Agent 运行时（Claude Code 安全内核复现）。',
+  'settings.kernel.jiuwenDesc': 'jiuwenSwarm 蜂群多智能体协作内核（vendor/jiuwenswarm）。',
+  'settings.kernel.configDirTitle': '数据目录',
+  'settings.kernel.configDirHint': '留空则使用内核默认目录：{dir}',
+  'settings.kernel.effectiveDir': '当前生效目录：{dir}',
+  'settings.kernel.jiuwenLaunchHint': '当前使用 jiuwen-Agent-core 内核，请改用专用命令启动：',
+  'settings.firstRun.title': '首次使用：请配置大模型',
+  'settings.firstRun.body': 'Openlab Robot 不内置默认模型。开始首个会话前，请先添加自定义模型（Base URL、API Key、模型名称）。',
+  'settings.firstRun.action': '立即配置',
+  'settings.firstRun.dismiss': '稍后再说',
+  'settings.about.ackCchaha': '致谢：cc-haha 内核为 Claude Code 安全内核复现，感谢 cc-haha 项目（NanmiCoder/cc-haha）。',
+
   'settings.tab.permissions': '权限',
   'settings.tab.activity': 'Token 用量',
   'settings.tab.trace': 'Trace',
@@ -490,7 +509,7 @@ export const zh: Record<TranslationKey, string> = {
   'settings.grokOfficialLogin.errorPrefix': 'Grok OAuth 错误:',
 
   // Settings > Providers
-  'settings.providers.title': '服务商',
+  'settings.providers.title': '大模型',
   'settings.providers.description': '管理 API 服务商以访问模型。',
   'settings.providers.addProvider': '添加服务商',
   'settings.providers.officialName': 'Claude 官方',

@@ -1,9 +1,9 @@
 {
-  "name": "claude-code-desktop",
+  "name": "openlab-robot-desktop",
   "private": true,
   "version": "0.4.10",
-  "description": "Desktop coding agent workbench for Claude Code Haha.",
-  "homepage": "https://github.com/NanmiCoder/cc-haha",
+  "description": "Desktop coding agent workbench for Openlab Robot.",
+  "homepage": "https://gitee.com/HongKongJournalist/OpenLab-Robot",
   "author": {
     "name": "NanmiCoder",
     "email": "relakkes@gmail.com"
@@ -11,15 +11,15 @@
   "type": "module",
   "main": "electron-dist/main.cjs",
   "build": {
-    "appId": "com.claude-code-haha.desktop",
-    "productName": "Claude Code Haha",
+    "appId": "com.openlab.robot",
+    "productName": "Openlab Robot",
     "asar": true,
     "asarUnpack": [
       "dist/**",
       "node_modules/node-pty/**",
       "src-tauri/binaries/**"
     ],
-    "artifactName": "Claude-Code-Haha-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Openlab-Robot-${version}-${os}-${arch}.${ext}",
     "npmRebuild": false,
     "directories": {
       "output": "build-artifacts/electron"

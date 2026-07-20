@@ -229,7 +229,26 @@ export const en = {
 
   // ─── Settings ──────────────────────────────────────
   'settings.title': 'Settings',
-  'settings.tab.providers': 'Providers',
+  'settings.tab.providers': 'Models',
+  'settings.tab.kernel': 'Kernel',
+  'settings.kernel.title': 'Kernel',
+  'settings.kernel.subtitle': 'Choose the agent kernel for Openlab Robot. The default config directory follows the kernel.',
+  'settings.kernel.active': 'Active',
+  'settings.kernel.saved': 'Saved.',
+  'settings.kernel.loading': 'Loading...',
+  'settings.kernel.save': 'Save',
+  'settings.kernel.ccHahaDesc': 'Default kernel. Local coding agent runtime (reproduction of the Claude Code secure kernel).',
+  'settings.kernel.jiuwenDesc': 'jiuwenSwarm multi-agent swarm kernel (vendor/jiuwenswarm).',
+  'settings.kernel.configDirTitle': 'Data directory',
+  'settings.kernel.configDirHint': 'Leave empty to use the kernel default: {dir}',
+  'settings.kernel.effectiveDir': 'Effective directory: {dir}',
+  'settings.kernel.jiuwenLaunchHint': 'The jiuwen-Agent-core kernel is active. Launch it with the dedicated command:',
+  'settings.firstRun.title': 'Configure a model to get started',
+  'settings.firstRun.body': 'Openlab Robot ships without preset models. Add a custom model (base URL, API key, model name) before starting your first session.',
+  'settings.firstRun.action': 'Configure now',
+  'settings.firstRun.dismiss': 'Later',
+  'settings.about.ackCchaha': 'Acknowledgement: the cc-haha kernel is a reproduction of the Claude Code secure kernel. Thanks to the cc-haha project (NanmiCoder/cc-haha).',
+
   'settings.tab.permissions': 'Permissions',
   'settings.tab.activity': 'Token usage',
   'settings.tab.trace': 'Trace',
@@ -488,7 +507,7 @@ export const en = {
   'settings.grokOfficialLogin.errorPrefix': 'Grok OAuth error: ',
 
   // Settings > Providers
-  'settings.providers.title': 'Providers',
+  'settings.providers.title': 'Models',
   'settings.providers.description': 'Manage API providers for model access.',
   'settings.providers.addProvider': 'Add Provider',
   'settings.providers.officialName': 'Claude Official',

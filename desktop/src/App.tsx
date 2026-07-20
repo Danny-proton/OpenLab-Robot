@@ -1,4 +1,5 @@
 import { AppShell } from './components/layout/AppShell'
+import { FirstRunModelModal } from './components/onboarding/FirstRunModelModal'
 import { useScheduledTaskDesktopNotifications } from './hooks/useScheduledTaskDesktopNotifications'
 import { installDesktopNotificationNavigation } from './lib/desktopNotificationNavigation'
 import { useEffect } from 'react'
@@ -22,5 +23,10 @@ export function App() {
       cleanup?.()
     }
   }, [])
-  return <AppShell />
+  return (
+    <>
+      <AppShell />
+      <FirstRunModelModal />
+    </>
+  )
 }

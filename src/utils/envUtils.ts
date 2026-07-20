@@ -1,16 +1,39 @@
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { join } from 'path'
+import { readFileSync } from 'fs'
+
+/**
+ * Openlab Robot 内核感知配置目录：
+ * CLAUDE_CONFIG_DIR 环境变量优先级最高（机制不变）；未设置时读取
+ * ~/.openlab-robot/kernel.json，按当前内核返回默认目录（cc-haha → ~/.claude，
+ * jiuwen-agent-core → ~/.jiuwenswarm），用户自定义 configDir 优先于内核默认。
+ */
+function getKernelDefaultConfigDir(): string {
+  try {
+    const raw = readFileSync(join(homedir(), '.openlab-robot', 'kernel.json'), 'utf-8')
+    const parsed = JSON.parse(raw) as { kernel?: string; configDir?: string }
+    if (typeof parsed.configDir === 'string' && parsed.configDir.trim()) {
+      return parsed.configDir.trim()
+    }
+    if (parsed.kernel === 'jiuwen-agent-core') {
+      return join(homedir(), '.jiuwenswarm')
+    }
+  } catch {
+    // 内核配置不存在或不可读时回退到 cc-haha 默认目录
+  }
+  return join(homedir(), '.claude')
+}
 
 // Memoized: 150+ callers, many on hot paths. Keyed off CLAUDE_CONFIG_DIR so
 // tests that change the env var get a fresh value without explicit cache.clear.
 export const getClaudeConfigHomeDir = memoize(
   (): string => {
     return (
-      process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')
+      process.env.CLAUDE_CONFIG_DIR ?? getKernelDefaultConfigDir()
     ).normalize('NFC')
   },
-  () => process.env.CLAUDE_CONFIG_DIR,
+  () => process.env.CLAUDE_CONFIG_DIR ?? getKernelDefaultConfigDir(),
 )
 
 export function getCcHahaDir(): string {

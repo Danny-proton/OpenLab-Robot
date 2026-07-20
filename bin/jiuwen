@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Openlab Robot — jiuwen-Agent-core 内核启动命令。
+# 使用 jiuwen-Agent-core 内核时请用本命令启动（蜂群多智能体协作 TUI）。
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENDOR_DIR="$ROOT_DIR/vendor/jiuwenswarm"
+
+export CALLER_DIR="${CALLER_DIR:-$(pwd -W 2>/dev/null || pwd)}"
+
+if [[ ! -d "$VENDOR_DIR" ]]; then
+  echo "[Openlab Robot] 未找到 jiuwen-Agent-core 内核（vendor/jiuwenswarm）。请确认仓库完整。" >&2
+  exit 1
+fi
+
+# 优先使用已编译的 Node 版 TUI 前端；否则回退到 Python CLI（jiuwenswarm chat）。
+TUI_DIST="$VENDOR_DIR/jiuwenswarm/channels/tui/frontend/dist/index.js"
+if [[ -f "$TUI_DIST" ]] && command -v node >/dev/null 2>&1; then
+  exec node "$TUI_DIST" "$@"
+fi
+
+PYTHON_BIN="$(command -v python3 || command -v python || true)"
+if [[ -z "$PYTHON_BIN" ]]; then
+  echo "[Openlab Robot] 启动 jiuwen-Agent-core 内核需要 python3（>=3.11）或 node 环境。" >&2
+  exit 1
+fi
+
+export PYTHONPATH="$VENDOR_DIR${PYTHONPATH:+:$PYTHONPATH}"
+export JIUWENSWARM_DATA_DIR="${JIUWENSWARM_DATA_DIR:-${HOME}/.jiuwenswarm}"
+exec "$PYTHON_BIN" -m jiuwenswarm.cli.main "$@"

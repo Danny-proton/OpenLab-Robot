@@ -1,71 +1,12 @@
 import type { ModelInfo } from '../types/settings'
-import { GROK_OFFICIAL_PROVIDER_ID } from './grokOfficialProvider'
 
 export const CLAUDE_OFFICIAL_PROVIDER_ID = 'claude-official'
 export const OPENAI_OFFICIAL_PROVIDER_ID = 'openai-official'
-export const BUILT_IN_PROVIDER_IDS = [
-  CLAUDE_OFFICIAL_PROVIDER_ID,
-  OPENAI_OFFICIAL_PROVIDER_ID,
-  GROK_OFFICIAL_PROVIDER_ID,
-] as const
+// Openlab Robot: 内置官方供应商入口已停用，仅保留用户自定义（custom）大模型。
+// 常量保留为空数组以保持类型兼容；如需恢复，改回原来的三个官方 provider id。
+export const BUILT_IN_PROVIDER_IDS: readonly string[] = []
 export const OPENAI_OFFICIAL_DEFAULT_MODEL_ID = 'gpt-5.6-sol'
 export const OPENAI_OFFICIAL_PROVIDER_NAME = 'ChatGPT Official'
 
-export const OPENAI_OFFICIAL_MODELS: ModelInfo[] = [
-  {
-    id: OPENAI_OFFICIAL_DEFAULT_MODEL_ID,
-    name: 'GPT-5.6-Sol',
-    description: 'Latest frontier agentic coding model',
-    context: '353400',
-    defaultReasoningEffort: 'low',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-  },
-  {
-    id: 'gpt-5.6-terra',
-    name: 'GPT-5.6-Terra',
-    description: 'Balanced agentic coding model for everyday work',
-    context: '353400',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-  },
-  {
-    id: 'gpt-5.6-luna',
-    name: 'GPT-5.6-Luna',
-    description: 'Fast and affordable agentic coding model',
-    context: '353400',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-  },
-  {
-    id: 'gpt-5.3-codex',
-    name: 'GPT-5.3 Codex',
-    description: 'Best for coding and agentic work',
-    context: '',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-  },
-  {
-    id: 'gpt-5.4',
-    name: 'GPT-5.4',
-    description: 'Strong general-purpose model',
-    context: '',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-  },
-  {
-    id: 'gpt-5.5',
-    name: 'GPT-5.5',
-    description: 'Latest general-purpose model',
-    context: '',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-  },
-  {
-    id: 'gpt-5.4-mini',
-    name: 'GPT-5.4 Mini',
-    description: 'Fastest for quick tasks',
-    context: '',
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-  },
-]
+// Openlab Robot: 不内置默认模型，用户需在「设置 → 大模型」中配置 custom 模型
+export const OPENAI_OFFICIAL_MODELS: ModelInfo[] = []

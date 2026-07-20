@@ -1,0 +1,170 @@
+/* ===========================================
+   MarkdownRenderer Component Styles
+   =========================================== */
+
+/* Toolbar button */
+.markdown-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.markdown-toolbar-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-default);
+}
+
+/* Toggle pill */
+.markdown-toggle-pill {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  color: var(--color-text-secondary);
+}
+
+.markdown-toggle-pill:hover {
+  color: var(--color-text-primary);
+}
+
+.markdown-toggle-pill--active {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--effect-shadow-sm);
+  border-color: var(--color-border-default);
+}
+
+/* Mermaid diagram container */
+.mermaid-diagram {
+  container-type: inline-size;
+  margin-block: 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-elevated);
+  overflow: hidden;
+}
+
+/* Expand the chat bubble to its maximum width when it contains a Mermaid
+   diagram, matching the behavior of regular code blocks. */
+.chat-bubble-wrapper:has(.mermaid-diagram) {
+  width: 100%;
+}
+
+.chat-bubble-wrapper:has(.mermaid-diagram) .mermaid-diagram {
+  width: 100%;
+}
+
+/* Toolbar */
+.mermaid-diagram__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-surface-page-accent);
+}
+
+/* View toggle container */
+.mermaid-diagram__view-toggle {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--color-action-secondary);
+  padding: 2px;
+  border: 1px solid var(--color-border-default);
+}
+
+/* Actions container */
+.mermaid-diagram__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+
+.mermaid-diagram__actions::-webkit-scrollbar {
+  display: none;
+}
+
+/* Toolbar divider */
+.mermaid-diagram__toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border-default);
+  margin-inline: 2px;
+}
+
+/* Canvas */
+.mermaid-canvas {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.mermaid-canvas--dragging {
+  cursor: grabbing;
+}
+
+/* SVG wrapper */
+.mermaid-svg-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+/* Prevent Mermaid from squeezing wide diagrams into the container width. */
+.mermaid-svg-wrapper svg {
+  max-width: none !important;
+}
+
+/* Code view */
+.mermaid-code-view {
+  position: relative;
+  overflow: auto;
+  padding-inline: 16px;
+}
+
+.mermaid-code-view pre {
+  font-size: 14px;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+/* Responsive container queries */
+@container (max-width: 260px) {
+  .mermaid-diagram__toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 6px;
+  }
+
+  .mermaid-diagram__view-toggle {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .mermaid-diagram__actions {
+    width: 100%;
+  }
+}

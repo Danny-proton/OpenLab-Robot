@@ -29,6 +29,7 @@ import { handleOpenTargetsApi } from './api/open-targets.js'
 import { handleMemoryApi } from './api/memory.js'
 import { handleDesktopUiApi } from './api/desktop-ui.js'
 import { handleTracesApi } from './api/traces.js'
+import { handleKernelApi } from './api/kernel.js'
 
 export async function handleApiRequest(req: Request, url: URL): Promise<Response> {
   const path = url.pathname
@@ -72,6 +73,9 @@ export async function handleApiRequest(req: Request, url: URL): Promise<Response
 
     case 'status':
       return handleStatusApi(req, url, segments)
+
+    case 'kernel':
+      return handleKernelApi(req, url, segments)
 
     case 'teams':
       return handleTeamsApi(req, url, segments)

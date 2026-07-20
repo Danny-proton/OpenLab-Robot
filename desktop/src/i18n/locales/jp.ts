@@ -231,7 +231,26 @@ export const jp: Record<TranslationKey, string> = {
 
   // ─── Settings ──────────────────────────────────────
   'settings.title': '設定',
-  'settings.tab.providers': 'プロバイダー',
+  'settings.tab.providers': 'モデル',
+  'settings.tab.kernel': 'カーネル',
+  'settings.kernel.title': 'カーネル',
+  'settings.kernel.subtitle': 'Openlab Robot が使用するエージェントカーネルを選択します。デフォルトの設定ディレクトリはカーネルに追随します。',
+  'settings.kernel.active': '使用中',
+  'settings.kernel.saved': '保存しました。',
+  'settings.kernel.loading': '読み込み中…',
+  'settings.kernel.save': '保存',
+  'settings.kernel.ccHahaDesc': 'デフォルトカーネル。ローカルコーディングエージェントランタイム（Claude Code セキュアカーネルの再現）。',
+  'settings.kernel.jiuwenDesc': 'jiuwenSwarm マルチエージェントスウォームカーネル（vendor/jiuwenswarm）。',
+  'settings.kernel.configDirTitle': 'データディレクトリ',
+  'settings.kernel.configDirHint': '空欄の場合はカーネルのデフォルトを使用: {dir}',
+  'settings.kernel.effectiveDir': '現在有効なディレクトリ: {dir}',
+  'settings.kernel.jiuwenLaunchHint': 'jiuwen-Agent-core カーネルが有効です。専用コマンドで起動してください：',
+  'settings.firstRun.title': '初回セットアップ：モデルを設定',
+  'settings.firstRun.body': 'Openlab Robot にはプリセットモデルがありません。最初のセッション前にカスタムモデル（Base URL、API キー、モデル名）を追加してください。',
+  'settings.firstRun.action': '今すぐ設定',
+  'settings.firstRun.dismiss': 'あとで',
+  'settings.about.ackCchaha': '謝辞：cc-haha カーネルは Claude Code セキュアカーネルの再現です。cc-haha プロジェクト（NanmiCoder/cc-haha）に感謝します。',
+
   'settings.tab.permissions': '権限',
   'settings.tab.activity': 'トークン使用量',
   'settings.tab.trace': 'Trace',
@@ -490,7 +509,7 @@ export const jp: Record<TranslationKey, string> = {
   'settings.grokOfficialLogin.errorPrefix': 'Grok OAuth エラー: ',
 
   // Settings > Providers
-  'settings.providers.title': 'プロバイダー',
+  'settings.providers.title': 'モデル',
   'settings.providers.description': 'モデルにアクセスするための API プロバイダーを管理します。',
   'settings.providers.addProvider': 'プロバイダーを追加',
   'settings.providers.officialName': 'Claude 公式',

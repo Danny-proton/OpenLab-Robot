@@ -231,7 +231,26 @@ export const kr: Record<TranslationKey, string> = {
 
   // ─── Settings ──────────────────────────────────────
   'settings.title': '설정',
-  'settings.tab.providers': '공급자',
+  'settings.tab.providers': '모델',
+  'settings.tab.kernel': '커널',
+  'settings.kernel.title': '커널',
+  'settings.kernel.subtitle': 'Openlab Robot이 사용할 에이전트 커널을 선택하세요. 기본 설정 디렉터리는 커널을 따라 전환됩니다.',
+  'settings.kernel.active': '사용 중',
+  'settings.kernel.saved': '저장되었습니다.',
+  'settings.kernel.loading': '불러오는 중…',
+  'settings.kernel.save': '저장',
+  'settings.kernel.ccHahaDesc': '기본 커널. 로컬 코딩 에이전트 런타임(Claude Code 보안 커널 재현).',
+  'settings.kernel.jiuwenDesc': 'jiuwenSwarm 멀티 에이전트 스웜 커널(vendor/jiuwenswarm).',
+  'settings.kernel.configDirTitle': '데이터 디렉터리',
+  'settings.kernel.configDirHint': '비워 두면 커널 기본 디렉터리 사용: {dir}',
+  'settings.kernel.effectiveDir': '현재 적용 디렉터리: {dir}',
+  'settings.kernel.jiuwenLaunchHint': 'jiuwen-Agent-core 커널이 활성화되었습니다. 전용 명령으로 실행하세요:',
+  'settings.firstRun.title': '첫 사용: 모델을 설정하세요',
+  'settings.firstRun.body': 'Openlab Robot에는 기본 모델이 없습니다. 첫 세션 전에 사용자 지정 모델(Base URL, API 키, 모델 이름)을 추가하세요.',
+  'settings.firstRun.action': '지금 설정',
+  'settings.firstRun.dismiss': '나중에',
+  'settings.about.ackCchaha': '감사: cc-haha 커널은 Claude Code 보안 커널의 재현입니다. cc-haha 프로젝트(NanmiCoder/cc-haha)에 감사드립니다.',
+
   'settings.tab.permissions': '권한',
   'settings.tab.activity': '토큰 사용량',
   'settings.tab.trace': 'Trace',
@@ -490,7 +509,7 @@ export const kr: Record<TranslationKey, string> = {
   'settings.grokOfficialLogin.errorPrefix': 'Grok OAuth 오류: ',
 
   // Settings > Providers
-  'settings.providers.title': '공급자',
+  'settings.providers.title': '모델',
   'settings.providers.description': '모델 액세스를 위한 API 공급자를 관리합니다.',
   'settings.providers.addProvider': '공급자 추가',
   'settings.providers.officialName': 'Claude 공식',

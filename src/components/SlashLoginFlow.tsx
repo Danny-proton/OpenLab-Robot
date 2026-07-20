@@ -44,7 +44,7 @@ function PlatformSetupFlow({
         <Text bold>Documentation:</Text>
         <Text>
           · Amazon Bedrock:{' '}
-          <Link url="https://code.claude.com/docs/en/amazon-bedrock" />
+          <Link url="https://atomgit.com/openJiuwen/jiuwenswarm" />
         </Text>
         <Text>
           · Microsoft Foundry:{' '}
