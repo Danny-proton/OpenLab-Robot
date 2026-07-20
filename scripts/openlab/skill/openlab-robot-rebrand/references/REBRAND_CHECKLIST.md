@@ -18,6 +18,7 @@
 | 目标仓库 | https://gitee.com/HongKongJournalist/OpenLab-Robot |
 | 外部文档链接 | https://atomgit.com/openJiuwen/jiuwenswarm |
 | 品牌定制配置 | `~/.openlab-robot/brand.json`（appName/agentName/chatPlaceholder/systemPromptOverride） |
+| 构建期默认值 | 应用根目录 `openlab.defaults.json`（示例见 `openlab.defaults.example.json`），可配置 brand/kernel/workspace/skin 默认值；用户运行时配置优先 |
 
 ## 一、机械替换（脚本自动完成）
 
@@ -72,6 +73,20 @@ TUI 欢迎语、system prompt 身份、外部链接 → jiuwen。
          应用名/智能体名/对话框占位提示/系统提示词。
    - [ ] `ChatInput.tsx` 占位提示优先使用 `chatPlaceholder` 定制值。
    - [ ] 侧边栏标题、通知标题（chatStore）使用 `appName`。
+
+2.6 **构建期默认值 / 默认工作区 / 皮肤定制**
+   - [ ] `src/utils/openlabDefaults.ts` 存在；brandConfig / kernelService /
+         workspaceService / skinService 的默认值均遵循
+         `用户配置 > openlab.defaults.json > 硬编码默认`。
+   - [ ] `src/server/services/workspaceService.ts` + `/api/workspace`；
+         `sessionService.createSession` 未传 workDir 时使用
+         `getDefaultWorkspaceDir()`。
+   - [ ] 通用设置页含「默认工作区」（WorkspaceSettings）；
+         `EmptySession.tsx` 预填默认工作区路径。
+   - [ ] `src/server/services/skinService.ts` + `/api/skin`；
+         桌面端 `skinStore`（SKIN_PRESETS + applyCurrent），
+         通用设置页含「皮肤定制」（SkinSettings）；
+         `App.tsx` 启动加载皮肤且主题切换时重新应用。
    - [ ] 终端页 `TerminalKernelGuide`（按内核显示不同引导 + 流动边框动画），
          TerminalSettings 激活/spawn 后自动 `terminal.focus()`。
 
@@ -87,17 +102,20 @@ TUI 欢迎语、system prompt 身份、外部链接 → jiuwen。
    - [ ] `BUILT_IN_PROVIDER_IDS` 为空数组（隐藏内置官方供应商，仅 custom）。
    - [ ] `desktop/src/components/onboarding/FirstRunModelModal.tsx` 存在，
          且 `desktop/src/App.tsx` 中已挂载（首次使用弹出配置 custom 模型提示）。
-   - [ ] `src/components/LogoV2/KernelHint.tsx` 存在并在 `LogoV2.tsx`
-         两种布局的返回 fragment 中渲染。
+   - [ ] `desktop/src/App.tsx` 启动时调用 `useBrandStore.getState().fetchBrand()`。
 
 4. **i18n 新增 key**（上游重写 locale 文件后需补回）
    - [ ] `settings.tab.kernel`、`settings.kernel.*`（14 个）、
-         `settings.firstRun.*`（4 个）、`settings.about.ackCchaha`
+         `settings.firstRun.*`（4 个）、`settings.about.ackCchaha`、
+         `settings.tab.brand`、`settings.brand.*`（13 个）
          —— 五个 locale（en / zh / zh-TW / jp / kr）都要有。
+   - [ ] 页面文案不得出现 cc-haha 字样（诊断页列出的真实 localStorage
+         键名除外，那是功能性内容）。
 
 5. **文档与致谢**
    - [ ] `ACKNOWLEDGEMENTS.md` 保留对 cc-haha（Claude Code 安全内核复现）
-         与 jiuwenSwarm 的致谢。
+         与 jiuwenSwarm 的致谢（仓库级致谢保留；页面文案用「Claude Code
+         安全修复版」指代默认内核，不出现 cc-haha）。
    - [ ] docs/、release-notes/ 不改动（按需求保持上游原文）。
 
 ## 三、保持不变项（切勿"顺手优化"）

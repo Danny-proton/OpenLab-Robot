@@ -35,6 +35,8 @@ import type { ProviderPreset } from '../types/providerPreset'
 // import { AdapterSettings } from './AdapterSettings'
 import { KernelSettings } from '../components/settings/KernelSettings'
 import { BrandSettings } from '../components/settings/BrandSettings'
+import { SkinSettings } from '../components/settings/SkinSettings'
+import { WorkspaceSettings } from '../components/settings/WorkspaceSettings'
 import { useAgentStore } from '../stores/agentStore'
 import { useSessionStore } from '../stores/sessionStore'
 import type { AgentDefinition, AgentSource } from '../api/agents'
@@ -2630,6 +2632,12 @@ export function GeneralSettings() {
           </button>
         ))}
       </div>
+
+      {/* Skin customization */}
+      <SkinSettings />
+
+      {/* Default workspace for new sessions */}
+      <WorkspaceSettings />
 
       {/* Language selector */}
       <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">{t('settings.general.languageTitle')}</h2>

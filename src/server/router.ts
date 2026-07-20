@@ -31,6 +31,8 @@ import { handleDesktopUiApi } from './api/desktop-ui.js'
 import { handleTracesApi } from './api/traces.js'
 import { handleKernelApi } from './api/kernel.js'
 import { handleBrandApi } from './api/brand.js'
+import { handleWorkspaceApi } from './api/workspace.js'
+import { handleSkinApi } from './api/skin.js'
 
 export async function handleApiRequest(req: Request, url: URL): Promise<Response> {
   const path = url.pathname
@@ -80,6 +82,12 @@ export async function handleApiRequest(req: Request, url: URL): Promise<Response
 
     case 'brand':
       return handleBrandApi(req, url, segments)
+
+    case 'workspace':
+      return handleWorkspaceApi(req, url, segments)
+
+    case 'skin':
+      return handleSkinApi(req, url, segments)
 
     case 'teams':
       return handleTeamsApi(req, url, segments)

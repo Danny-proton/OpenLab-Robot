@@ -18,6 +18,7 @@
 | 目标仓库 | https://gitee.com/HongKongJournalist/OpenLab-Robot |
 | 外部文档链接 | https://atomgit.com/openJiuwen/jiuwenswarm |
 | 品牌定制配置 | `~/.openlab-robot/brand.json`（appName/agentName/chatPlaceholder/systemPromptOverride） |
+| 构建期默认值 | 应用根目录 `openlab.defaults.json`（示例见 `openlab.defaults.example.json`），可配置 brand/kernel/workspace/skin 默认值；用户运行时配置优先 |
 
 ## 一、机械替换（脚本自动完成）
 
@@ -72,6 +73,20 @@ TUI 欢迎语、system prompt 身份、外部链接 → jiuwen。
          应用名/智能体名/对话框占位提示/系统提示词。
    - [ ] `ChatInput.tsx` 占位提示优先使用 `chatPlaceholder` 定制值。
    - [ ] 侧边栏标题、通知标题（chatStore）使用 `appName`。
+
+2.6 **构建期默认值 / 默认工作区 / 皮肤定制**
+   - [ ] `src/utils/openlabDefaults.ts` 存在；brandConfig / kernelService /
+         workspaceService / skinService 的默认值均遵循
+         `用户配置 > openlab.defaults.json > 硬编码默认`。
+   - [ ] `src/server/services/workspaceService.ts` + `/api/workspace`；
+         `sessionService.createSession` 未传 workDir 时使用
+         `getDefaultWorkspaceDir()`。
+   - [ ] 通用设置页含「默认工作区」（WorkspaceSettings）；
+         `EmptySession.tsx` 预填默认工作区路径。
+   - [ ] `src/server/services/skinService.ts` + `/api/skin`；
+         桌面端 `skinStore`（SKIN_PRESETS + applyCurrent），
+         通用设置页含「皮肤定制」（SkinSettings）；
+         `App.tsx` 启动加载皮肤且主题切换时重新应用。
    - [ ] 终端页 `TerminalKernelGuide`（按内核显示不同引导 + 流动边框动画），
          TerminalSettings 激活/spawn 后自动 `terminal.focus()`。
 

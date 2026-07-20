@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { agentsApi } from '../api/agents'
 import { skillsApi } from '../api/skills'
+import { workspaceApi } from '../api/workspace'
 import { useTranslation } from '../i18n'
 import { useSessionStore } from '../stores/sessionStore'
 import { useChatStore } from '../stores/chatStore'
@@ -90,6 +91,15 @@ export function EmptySession() {
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [workDir, setWorkDir] = useState('')
+  // Openlab Robot：预填默认工作区路径（设置 → 通用 → 默认工作区）
+  useEffect(() => {
+    workspaceApi.get()
+      .then((info) => {
+        setWorkDir((current) => current || info.effectiveDefaultDir)
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
   const [useWorktree, setUseWorktree] = useState(false)
   const [repositoryLaunchReady, setRepositoryLaunchReady] = useState(true)

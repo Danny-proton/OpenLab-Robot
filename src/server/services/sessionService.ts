@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
+import { getDefaultWorkspaceDir } from './workspaceService.js'
 import { createInterface } from 'node:readline'
 import { ApiError } from '../middleware/errorHandler.js'
 import { sanitizePath as sanitizePortablePath } from '../../utils/sessionStoragePortable.js'
@@ -3463,8 +3464,8 @@ export class SessionService {
     repositoryOptions?: CreateSessionRepositoryOptions,
     permissionMode?: string,
   ): Promise<{ sessionId: string; workDir: string }> {
-    // Default to user home directory when no workDir specified
-    const resolvedWorkDir = workDir || os.homedir()
+    // 未指定目录时使用 Openlab Robot 默认工作区（设置项/构建期默认/主目录）
+    const resolvedWorkDir = workDir || getDefaultWorkspaceDir()
     const sessionId = crypto.randomUUID()
 
     // Resolve to absolute path. NOTE: path.resolve() uses process.cwd() to

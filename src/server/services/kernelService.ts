@@ -15,6 +15,7 @@
 import * as os from 'os'
 import * as path from 'path'
 import * as fs from 'fs'
+import { getOpenlabDefaults } from '../../utils/openlabDefaults.js'
 
 export type KernelId = 'cc-haha' | 'jiuwen-agent-core'
 
@@ -42,6 +43,15 @@ const KERNEL_FILE = path.join(OPENLAB_DIR, 'kernel.json')
 
 export const DEFAULT_KERNEL: KernelId = 'cc-haha'
 
+/** 构建期默认内核（openlab.defaults.json 可覆盖） */
+export function getBuildDefaultKernel(): KernelId {
+  const build = getOpenlabDefaults().kernel
+  if (build?.kernel && (KERNEL_IDS as readonly string[]).includes(build.kernel)) {
+    return build.kernel as KernelId
+  }
+  return DEFAULT_KERNEL
+}
+
 /** 各内核的默认用户数据目录 */
 export function defaultConfigDirFor(kernel: KernelId): string {
   return kernel === 'jiuwen-agent-core'
@@ -58,19 +68,19 @@ function isKernelId(value: unknown): value is KernelId {
   return typeof value === 'string' && (KERNEL_IDS as readonly string[]).includes(value)
 }
 
-/** 读取内核配置（不存在时返回默认 cc-haha） */
+/** 读取内核配置（不存在时返回构建期默认或 cc-haha） */
 export function getKernelConfig(): KernelConfig {
   try {
     const raw = fs.readFileSync(KERNEL_FILE, 'utf-8')
     const parsed = JSON.parse(raw) as Partial<KernelConfig>
     return {
-      kernel: isKernelId(parsed.kernel) ? parsed.kernel : DEFAULT_KERNEL,
+      kernel: isKernelId(parsed.kernel) ? parsed.kernel : getBuildDefaultKernel(),
       configDir: typeof parsed.configDir === 'string' && parsed.configDir.trim()
         ? parsed.configDir.trim()
         : undefined,
     }
   } catch {
-    return { kernel: DEFAULT_KERNEL }
+    return { kernel: getBuildDefaultKernel() }
   }
 }
 
@@ -92,10 +102,12 @@ export function setKernelConfig(update: Partial<KernelConfig>): KernelConfig {
 export function getKernelInfo(): KernelInfo {
   const config = getKernelConfig()
   const defaultDir = defaultConfigDirFor(config.kernel)
+  // 生效目录优先级：用户自定义 > 构建期默认 > 内核默认
+  const buildDir = getOpenlabDefaults().kernel?.configDir
   return {
     ...config,
     defaultConfigDir: defaultDir,
-    effectiveConfigDir: config.configDir ?? defaultDir,
+    effectiveConfigDir: config.configDir ?? (buildDir && buildDir.trim() ? buildDir.trim() : undefined) ?? defaultDir,
     kernelFile: KERNEL_FILE,
     launchCommand: launchCommandFor(config.kernel),
   }

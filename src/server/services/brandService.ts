@@ -25,6 +25,7 @@ import {
   DEFAULT_AGENT_NAME,
   type BrandConfig,
 } from '../../utils/brandConfig.js'
+import { getOpenlabDefaults } from '../../utils/openlabDefaults.js'
 
 export type { BrandConfig } from '../../utils/brandConfig.js'
 export { DEFAULT_APP_NAME, DEFAULT_AGENT_NAME, getBrandConfig } from '../../utils/brandConfig.js'
@@ -59,14 +60,15 @@ export function setBrandConfig(update: BrandConfig): BrandConfig {
   return next
 }
 
-/** 获取完整品牌信息（含默认值回填） */
+/** 获取完整品牌信息（用户配置 > 构建期默认 > 硬编码默认） */
 export function getBrandInfo(): BrandInfo {
   const config = getBrandConfig()
+  const buildDefaults = getOpenlabDefaults().brand
   return {
-    appName: config.appName ?? DEFAULT_APP_NAME,
-    agentName: config.agentName ?? DEFAULT_AGENT_NAME,
-    chatPlaceholder: config.chatPlaceholder,
-    systemPromptOverride: config.systemPromptOverride,
+    appName: config.appName ?? buildDefaults?.appName ?? DEFAULT_APP_NAME,
+    agentName: config.agentName ?? buildDefaults?.agentName ?? DEFAULT_AGENT_NAME,
+    chatPlaceholder: config.chatPlaceholder ?? buildDefaults?.chatPlaceholder,
+    systemPromptOverride: config.systemPromptOverride ?? buildDefaults?.systemPromptOverride,
     brandFile: BRAND_FILE,
   }
 }
