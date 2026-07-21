@@ -277,6 +277,36 @@ export function startServer(port = PORT, host = HOST) {
           return new Response(null, { status: 204, headers: cors.headers })
         }
 
+        // Web 部署模式终端 WebSocket（浏览器无 Electron 宿主时的 PTY 通道）
+        if (url.pathname.startsWith('/ws/terminal/')) {
+          if (cors.rejected) {
+            return corsRejectedResponse(cors)
+          }
+          if (authRequired) {
+            const authError = await requireH5Token(req, url.searchParams.get('token'))
+            if (authError) return withCors(authError, cors)
+          } else if (forceAuth) {
+            const authError = await requireAuth(req, url.searchParams.get('token'))
+            if (authError) return withCors(authError, cors)
+          }
+          const sessionId = url.pathname.split('/').pop() || ''
+          if (!sessionId || !/^[0-9a-zA-Z_-]{1,64}$/.test(sessionId)) {
+            return new Response('Invalid session ID', { status: 400 })
+          }
+          const upgraded = server.upgrade(req, {
+            data: {
+              sessionId,
+              connectedAt: Date.now(),
+              channel: 'terminal',
+              sdkToken: null,
+              serverPort,
+              serverHost: localConnectHost,
+            },
+          })
+          if (upgraded) return undefined
+          return new Response('WebSocket upgrade failed', { status: 400 })
+        }
+
         // WebSocket upgrade
         if (url.pathname.startsWith('/ws/')) {
           if (cors.rejected) {

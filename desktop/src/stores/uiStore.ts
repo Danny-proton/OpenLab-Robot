@@ -19,6 +19,8 @@ const SETTINGS_TABS = [
   'memory',
   'plugins',
   'computerUse',
+  'chromeUse',
+  'account',
   'trace',
   'diagnostics',
   'about',
@@ -76,6 +78,8 @@ export type SettingsTab =
   | 'memory'
   | 'plugins'
   | 'computerUse'
+  | 'chromeUse'
+  | 'account'
   | 'trace'
   | 'diagnostics'
   | 'about'

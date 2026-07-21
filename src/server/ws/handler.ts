@@ -58,6 +58,7 @@ import {
 } from '../../utils/commandMetadata.js'
 import { shouldCreateWorktreeForSessionLaunch } from '../services/repositoryLaunchService.js'
 import { getDisconnectGraceMs } from './disconnectGraceConfig.js'
+import { webTerminalHandler } from './webTerminal.js'
 
 const settingsService = new SettingsService()
 const providerService = new ProviderService()
@@ -195,7 +196,7 @@ function translateCliUsage(usage: unknown): TokenUsage {
 export type WebSocketData = {
   sessionId: string
   connectedAt: number
-  channel: 'client' | 'sdk'
+  channel: 'client' | 'sdk' | 'terminal'
   sdkToken: string | null
   serverPort: number
   serverHost: string
@@ -216,6 +217,11 @@ const taskNotificationPersistence = new Map<string, Map<string, Promise<void>>>(
 export const handleWebSocket = {
   open(ws: ServerWebSocket<WebSocketData>) {
     const { sessionId, channel, sdkToken } = ws.data
+
+    if (channel === 'terminal') {
+      webTerminalHandler.open(ws)
+      return
+    }
 
     if (channel === 'sdk') {
       if (!conversationService.authorizeSdkConnection(sessionId, sdkToken)) {
@@ -262,6 +268,10 @@ export const handleWebSocket = {
   },
 
   message(ws: ServerWebSocket<WebSocketData>, rawMessage: string | Buffer) {
+    if (ws.data.channel === 'terminal') {
+      webTerminalHandler.message(ws, rawMessage)
+      return
+    }
     if (ws.data.channel === 'sdk') {
       const payload = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
       conversationService.handleSdkPayload(ws.data.sessionId, payload)
@@ -356,6 +366,11 @@ export const handleWebSocket = {
 
   close(ws: ServerWebSocket<WebSocketData>, code: number, reason: string) {
     const { sessionId, channel } = ws.data
+
+    if (channel === 'terminal') {
+      webTerminalHandler.close(ws)
+      return
+    }
 
     if (channel === 'sdk') {
       console.log(`[WS] SDK disconnected from session: ${sessionId} (${code}: ${reason})`)

@@ -33,6 +33,10 @@ import { handleKernelApi } from './api/kernel.js'
 import { handleBrandApi } from './api/brand.js'
 import { handleWorkspaceApi } from './api/workspace.js'
 import { handleSkinApi } from './api/skin.js'
+import { handleAuthApi } from './api/auth.js'
+import { handleSyncApi } from './api/sync.js'
+import { handleSkillPrefsApi } from './api/skillPrefs.js'
+import { handleChromeUseApi } from './api/chrome-use.js'
 
 export async function handleApiRequest(req: Request, url: URL): Promise<Response> {
   const path = url.pathname
@@ -88,6 +92,18 @@ export async function handleApiRequest(req: Request, url: URL): Promise<Response
 
     case 'skin':
       return handleSkinApi(req, url, segments)
+
+    case 'auth':
+      return handleAuthApi(req, url, segments)
+
+    case 'sync':
+      return handleSyncApi(req, url, segments)
+
+    case 'skill-prefs':
+      return handleSkillPrefsApi(req, url, segments)
+
+    case 'chrome-use':
+      return handleChromeUseApi(req, url, segments)
 
     case 'teams':
       return handleTeamsApi(req, url, segments)

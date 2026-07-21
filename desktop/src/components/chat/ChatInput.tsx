@@ -18,6 +18,8 @@ import { agentsApi } from '../../api/agents'
 import { PermissionModeSelector } from '../controls/PermissionModeSelector'
 import { ModelSelector, type ModelSelectorHandle } from '../controls/ModelSelector'
 import type { AttachmentRef } from '../../types/chat'
+import { SkillChips, SkillPicker } from './SkillChips'
+import { useSkillPrefsStore, type ComposerSkill } from '../../stores/skillPrefsStore'
 import { AttachmentGallery } from './AttachmentGallery'
 import { ComposerDropOverlay } from './ComposerDropOverlay'
 import { ProjectContextChip } from '../shared/ProjectContextChip'
@@ -95,6 +97,10 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [plusMenuOpen, setPlusMenuOpen] = useState(false)
+  const [skillPickerOpen, setSkillPickerOpen] = useState(false)
+  const [composerSkills, setComposerSkills] = useState<ComposerSkill[]>([])
+  const defaultPrefixSkill = useSkillPrefsStore((state) => state.defaultPrefixSkill)
+  const fetchSkillPrefs = useSkillPrefsStore((state) => state.fetchPrefs)
   const [slashMenuOpen, setSlashMenuOpen] = useState(false)
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
   const [localSlashPanel, setLocalSlashPanel] = useState<LocalSlashCommandName | null>(null)
@@ -360,6 +366,7 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
   useEffect(() => {
     if (!isMemberSession) return
     setComposerAttachments([])
+    setComposerSkills([])
     setPlusMenuOpen(false)
     setSlashMenuOpen(false)
     setFileSearchOpen(false)
@@ -621,6 +628,10 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
     }
   }, [activeTabId, replaceEmptySession, t])
 
+  useEffect(() => {
+    void fetchSkillPrefs()
+  }, [fetchSkillPrefs])
+
   const handleSubmit = async () => {
     const text = input.trim()
     if ((!text && ((!attachments.length && !hasWorkspaceReferences) || isMemberSession)) || isWorkspaceMissing) return
@@ -658,7 +669,12 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
     const workspaceReferencePrompt = !isMemberSession
       ? formatWorkspaceReferencePrompt(workspaceReferences)
       : ''
-    const contentForModel = [workspaceReferencePrompt, text].filter(Boolean).join('\n\n')
+    const skillTokens = [
+      ...(defaultPrefixSkill ? [defaultPrefixSkill] : []),
+      ...composerSkills.map((skill) => skill.name),
+    ]
+    const skillPrefix = skillTokens.length > 0 ? skillTokens.map((name) => `/${name}`).join(' ') + '\n' : ''
+    const contentForModel = [workspaceReferencePrompt, skillPrefix + text].filter(Boolean).join('\n\n')
     const displayContent = text || (
       workspaceReferences.length > 0
         ? t('chat.contextReferencesOnly', { count: workspaceReferences.length })
@@ -1239,6 +1255,15 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
             )
           )}
 
+          <div className="px-3 pt-1">
+            <SkillChips
+              composerSkills={composerSkills}
+              onRemoveComposerSkill={(name) =>
+                setComposerSkills((prev) => prev.filter((skill) => skill.name !== name))
+              }
+            />
+          </div>
+
           {isHeroComposer ? (
             <div className="flex items-start gap-3">
               <textarea
@@ -1303,6 +1328,16 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
                           <span className="text-sm text-[var(--color-text-primary)]">{addFilesLabel}</span>
                         </button>
                         <button
+                          onClick={() => {
+                            setPlusMenuOpen(false)
+                            setSkillPickerOpen(true)
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--color-surface-hover)]"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-[var(--color-text-secondary)]">psychology</span>
+                          <span className="text-sm text-[var(--color-text-primary)]">{t('skills.picker.insert')}</span>
+                        </button>
+                        <button
                           onClick={insertSlashCommand}
                           className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--color-surface-hover)]"
                         >
@@ -1310,6 +1345,18 @@ export function ChatInput({ variant = 'default', compact = false }: ChatInputPro
                           <span className="text-sm text-[var(--color-text-primary)]">{slashCommandsLabel}</span>
                         </button>
                       </div>
+                    )}
+
+                    {skillPickerOpen && (
+                      <SkillPicker
+                        workDir={resolvedWorkDir ?? undefined}
+                        onPick={(skill) =>
+                          setComposerSkills((prev) =>
+                            prev.some((item) => item.name === skill.name) ? prev : [...prev, skill],
+                          )
+                        }
+                        onClose={() => setSkillPickerOpen(false)}
+                      />
                     )}
                   </div>
 

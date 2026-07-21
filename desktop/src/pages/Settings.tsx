@@ -48,6 +48,9 @@ import { usePluginStore } from '../stores/pluginStore'
 import { PluginList } from '../components/plugins/PluginList'
 import { PluginDetail } from '../components/plugins/PluginDetail'
 import { ComputerUseSettings } from './ComputerUseSettings'
+import { ChromeUseSettings } from '../components/settings/ChromeUseSettings'
+import { AccountSettings } from '../components/settings/AccountSettings'
+import { SkillPrefsSettings } from '../components/settings/SkillPrefsSettings'
 import { McpSettings } from './McpSettings'
 import { TerminalSettings } from './TerminalSettings'
 import { DiagnosticsSettings } from './DiagnosticsSettings'
@@ -236,6 +239,8 @@ export function Settings() {
             <TabButton icon="history_edu" label={t('settings.tab.memory')} active={activeTab === 'memory'} onClick={() => setActiveTab('memory')} />
             <TabButton icon="extension" label={t('settings.tab.plugins')} active={activeTab === 'plugins'} onClick={() => setActiveTab('plugins')} />
             <TabButton icon="mouse" label={t('settings.tab.computerUse')} active={activeTab === 'computerUse'} onClick={() => setActiveTab('computerUse')} />
+            <TabButton icon="language" label={t('settings.tab.chromeUse')} active={activeTab === 'chromeUse'} onClick={() => setActiveTab('chromeUse')} />
+            <TabButton icon="account_circle" label={t('settings.tab.account')} active={activeTab === 'account'} onClick={() => setActiveTab('account')} />
             <TabButton icon="monitoring" label={t('settings.tab.activity')} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} />
             <TabButton icon="account_tree" label={t('settings.tab.trace')} active={activeTab === 'trace'} onClick={() => setActiveTab('trace')} />
             <TabButton icon="monitor_heart" label={t('settings.tab.diagnostics')} active={activeTab === 'diagnostics'} onClick={() => setActiveTab('diagnostics')} />
@@ -263,6 +268,8 @@ export function Settings() {
           {activeTab === 'memory' && <MemorySettings />}
           {activeTab === 'plugins' && <PluginSettings />}
           {activeTab === 'computerUse' && <ComputerUseSettings />}
+          {activeTab === 'chromeUse' && <ChromeUseSettings />}
+          {activeTab === 'account' && <AccountSettings />}
           {activeTab === 'trace' && <TraceList />}
           {activeTab === 'diagnostics' && <DiagnosticsSettings />}
           {activeTab === 'about' && <AboutSettings />}
@@ -2638,6 +2645,9 @@ export function GeneralSettings() {
 
       {/* Default workspace for new sessions */}
       <WorkspaceSettings />
+
+      {/* Composer skill preferences */}
+      <SkillPrefsSettings />
 
       {/* Language selector */}
       <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">{t('settings.general.languageTitle')}</h2>
