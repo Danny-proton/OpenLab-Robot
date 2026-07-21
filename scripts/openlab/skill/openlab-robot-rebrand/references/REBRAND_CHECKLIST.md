@@ -140,3 +140,23 @@ bin/openlab-robot --version                          # CLI 可启动
 并确认 `bin/jiuwen` 的两个启动入口仍存在：
 `jiuwenswarm/channels/tui/frontend/dist/index.js` 与
 `python3 -m jiuwenswarm.cli.main`。
+
+## 六、第 4 轮功能（账户/技能/Chrome use/Web 终端）
+
+- 账户与云同步（mock）：`src/server/services/authService.ts`（登录、token 本地持久化、
+  features 开关：运行时 app.json > openlab.defaults.json > 默认开启）、
+  `syncService.ts`（四个 scope：agentConfig/skill/sessionHistory/memory，mock:// URL，
+  历史上限 50 条）；REST：`/api/auth`、`/api/sync`；设置页"账户"选项卡。
+- 对话框技能系统：`skillPrefsService.ts` + `/api/skill-prefs`；
+  前端 `desktop/src/components/chat/SkillChips.tsx`（SkillPicker 本地+市场搜索、
+  钉子常驻、拖动重排、分组、过长渐变、置入动效、双击改别名、气泡渲染）；
+  ChatInput 加号菜单"置入技能"入口与 `/name` 前缀注入；
+  通用设置中 `SkillPrefsSettings`（默认前缀技能 + 常驻默认值，构建期可用
+  openlab.defaults.json 的 skillPrefs 段预置）。
+- Chrome use 页签：`chromeUseService.ts`（chrome-devtools MCP 探测、Chrome>=144、
+  9222 远程调试检查、`--remote-allow-origins=*` 启动）+ `/api/chrome-use`；
+  前端 `ChromeUseSettings.tsx` 直连 CDP `Page.startScreencast` 串流画面。
+- Web 部署终端：服务端 `src/server/ws/webTerminal.ts`（/ws/terminal/{id} 通道，
+  Bun PTY 优先、pipe 回退，base64 输出）；前端 `desktop/src/api/terminal.ts`
+  在无 Electron 宿主时自动走 WebSocket fallback，终端与文件系统（纯 HTTP API）在
+  浏览器直连模式下均可用。

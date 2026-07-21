@@ -1,26 +1,30 @@
 {
   "$schema": "Openlab Robot 构建期默认值配置（示例）",
   "_说明": "构建/打包时将此文件复制为 openlab.defaults.json 并放在应用根目录（或设置环境变量 OPENLAB_DEFAULTS_FILE 指向它）。所有项均为可选，不配置则使用软件内置默认值。运行时用户在设置中修改的同名配置优先于此文件。",
-
   "brand": {
     "appName": "Openlab Robot",
     "agentName": "Openlab Robot",
     "chatPlaceholder": "",
     "systemPromptOverride": ""
   },
-
   "kernel": {
     "kernel": "cc-haha",
     "configDir": ""
   },
-
   "workspace": {
     "defaultDir": ""
   },
-
   "skin": {
     "theme": "white",
     "preset": "default",
     "accentColor": ""
+  },
+  "features": {
+    "auth": true,
+    "cloudSync": true
+  },
+  "skillPrefs": {
+    "pinned": [],
+    "defaultPrefixSkill": ""
   }
 }
