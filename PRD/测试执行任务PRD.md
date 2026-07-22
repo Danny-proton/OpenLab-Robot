@@ -1,307 +1,69 @@
-# OpenLab-Robot 测试执行任务 PRD
+需要为Openlab-Robot客户端中新增一个「新建测试任务」的页签，主要概念如下
 
-> **文档类型**：产品需求文档（PRD）
-> **功能模块**：新建测试任务 —— 批量测试执行
-> **文档版本**：v1.0
-> **状态**：待评审 / 开发前
+在"新建会话"下新增按钮"新建测试任务"，测试任务有三种，测试设计、测试执行、Agent评测，我们先做批量测试执行的页签，剩下先置灰，注意页签内要尽量丰富动效
 
----
+用户点击新建执行任务页签后进入到覆盖中右侧的执行任务管理界面，最右侧是展示当前在流程的多个环节的缩略图，展示当前在哪个环节，已经执行了哪些环节还未做哪些环节，哪些环节已经被执行或确认过了
 
-## 0. 修订记录
+批量执行任务会单独新建一个文件夹和项目名同名，作为工作区，历史执行过的批量任务可以在右侧侧边栏查到
 
-| 版本 | 日期 | 修订人 | 修订内容 |
-| ---- | ---- | ------ | -------- |
-| v1.0 | 2025 | Product | 首版，覆盖批量测试执行全流程（用例导入 → 任务设置 → 执行 → 结果分析 → 上传） |
+输出 5 张页面：
 
----
+1、新建执行任务
 
-## 1. 背景与目标
+测试用例所在文件，模板下载，上传，路径，导入后变成用例卡片，也可以直接导入任务json，还有从TAAS拉取的功能未来支持暂时置灰
 
-### 1.1 背景
+新建任务首先需要命名一个项目名，默认按照第一个用例名+等用例执行+时间，可以手动编辑
 
-OpenLab-Robot 当前已有「新建会话」入口，用户可基于 Claude-Haha 等命令行工具串行执行测试用例，并通过 `run_claude_tasks.py` 这类脚本批量驱动。但现有流程存在以下痛点：
+上传后展示一格格的测试用例，每个包含用例名、预置条件、测试步骤、预期结果，然后会完成用例自检，给出质量评级，调用一个外部的质检包，先包括是否包含四个步骤的字段完整性、步骤数量不低于3步不超过150步、是否包含"应该"、"必须"等验证性词汇等自动化检查项，后续增加LLM评估项，按照出错个数给出质量评级，出现带红黄绿色的角标
 
-- 用例以 JSON 手工编辑，缺少可视化管理和质量校验；
-- 任务编排（并行/批次/依赖）需要手写配置，门槛高、易出错；
-- 执行过程只能在终端查看，缺少进度可视化、状态归因和结果回溯；
-- 失败用例无法便捷地归因、复跑和上传到缺陷管理平台。
+可以编辑用例卡片之间的依赖关系，有依赖关系的用例可以像纸牌一样叠放，鼠标拖动用例卡片的时候可以有点交互动效，叠放的时候要有动效，已经叠放的用例可以点开分别编辑每个用例，要有个动效
 
-### 1.2 目标
+然后需要设置重复执行次数、失败重试次数、单批执行个数三个数字
 
-在「新建会话」下新增「新建测试任务」入口，**首期优先实现「批量测试执行」页签**，为用户提供从用例导入、质量自检、任务编排、批量执行、结果分析到结果上传的端到端可视化能力。
+点击确认用例设置后进入下一个卡片
 
-### 1.3 范围
+2、执行任务设置
 
-| 项目 | 本期范围 | 备注 |
-| ---- | -------- | ---- |
-| 批量测试执行 | ✅ 首期实现 | 本 PRD 主体 |
-| 测试设计 | ⏸ 置灰占位 | 后续迭代 |
-| Agent 评测 | ⏸ 置灰占位 | 后续迭代 |
-| 从 TAAS 拉取用例 | ⏸ 置灰占位 | 后续迭代 |
-| LLM 用例质量评估 | ⏸ 预留接口，后续接入 | 自动化规则检查先上 |
+这个也可以导入json，或者已经导入过json了直接展示结果
 
-### 1.4 非目标
+新建的任务包括并行和批次两种，批次内用例全都执行完了才能执行下一个批次，同一批次内可以设置并行用例，这方面需要有个说明
 
-- 不在本期实现测试设计、Agent 评测两个页签的具体功能；
-- 不替换底层 `claude-haha` / `run_claude_tasks.py` 执行引擎，前端通过编排和可视化包装现有能力。
+默认执行命令是 @test-web-execution +默认用例执行命令+用例内容
 
----
+允许修改命名模板重新生成任务上的命令
 
-## 2. 名词与概念
+因为上一个步骤设置过所以这一页可以自动生成一版任务
 
-| 名词 | 说明 |
-| ---- | ---- |
-| 测试用例（Case） | 单条可执行的测试步骤集合，包含用例名、预置条件、测试步骤、预期结果 |
-| 用例卡片 | 用例在前端的可视化呈现，支持编辑、依赖、叠放 |
-| 任务（Task） | 一条用例经编排后生成的可执行单元，包含 cwd、prompt、重复次数、重试次数等 |
-| 批次（Batch） | 串行执行的单元，批次内可并行；批次内全部任务完成才进入下一批次 |
-| 并行任务 | 同一批次内可同时执行的多条任务 |
-| 叠放任务 | 存在依赖关系的用例，前端以"纸牌叠放"形式聚合展示 |
-| 工作区（Workspace） | 每个批量执行任务单独创建一个与项目名同名的文件夹，作为执行的工作目录 |
-| 质量评级 | 用例自检后给出的等级，角标颜色：绿（优）/黄（良）/红（差） |
-| session_id | 单条任务执行后由 claude-haha 返回的会话标识，用于跳转和回溯 |
-| 判定（Verdict） | 任务执行结果分类：全部完成 / 部分完成 / 中断 |
+每个串行任务独占一行，重复执行、失败重试、依赖用例的有叠放，叠放可以展开，展开后子任务有缩进和虚线，并行任务在同一行，不同批次有分割线
 
----
+也允许单个编辑命令内容
 
-## 3. 功能架构
+允许重新拖放任务顺序，允许拖放到不同的分割线里，放到任务右侧可以设置并行，放中间和左侧可以设置分组叠放
 
-### 3.1 入口与导航
+完成设置后进入到执行卡片
 
-- 在「新建会话」下新增按钮「新建测试任务」；
-- 点击后弹出三种任务类型页签：**测试设计**、**测试执行**、**Agent 评测**；
-- 本期仅「测试执行」页签可点击，其余两个置灰（带 Tooltip：「即将上线」）；
-- 页签内需有**丰富的动效**（进入动画、页签切换过渡、悬浮反馈）。
+3、任务执行过程*N个批次
 
-### 3.2 整体流程
+有多少个批次就会多出几个右侧的执行缩略卡片，一个变多个要有动效
 
-```
-[新建测试任务]
-      │
-      ▼
-┌─────────────────────────────────────────────────────────┐
-│  右侧主区：执行任务管理界面                                │
-│  最右侧：环节缩略图（当前环节 / 已完成 / 待执行）           │
-└─────────────────────────────────────────────────────────┘
-      │
-      ▼
-┌─────────────── 全局五步卡片流（左右滑动切换） ───────────────┐
-│ ① 新建执行任务（用例导入 + 自检 + 依赖编排 + 参数设置）        │
-│ ② 执行任务设置（并行/批次编排 + 命令模板 + 拖拽排序）         │
-│ ③ 任务执行过程（N 个批次缩略卡片，实时状态 + 进度）           │
-│ ④ 执行结果分析（可视化分析 + 失败归因 + 导出）               │
-│ ⑤ 结果总结与上传（重试 / 上传 BUG 单 / 上传执行结果）         │
-└─────────────────────────────────────────────────────────────┘
-```
+执行的任务和上一页的任务样子是一样的，每个批次只展示这个批次的任务
 
-### 3.3 右侧环节缩略图
+成功执行的是绿色，执行失败的是橙色，未执行的是灰色，正在重试的是黄色，执行中的是蓝色有脉冲动效有假进度条
 
-- 始终展示在界面最右侧，纵向排列当前任务流的所有环节缩略图；
-- 实时高亮「当前所在环节」；
-- 已完成环节显示完成标记，未执行环节置灰；
-- 批次执行阶段，缩略卡片从 1 张扩展为 N 张（N = 批次数），需有展开动效。
+执行到叠放任务的时候会展开分别展示进度，执行中和执行完的任务可以点击跳转到相关单个用例的详情结果页
 
-### 3.4 工作区与历史
+​	-  单个用例的执行结果页有几个部分卡片:执行任务的session详情，点击可以跳转到相应的会话，展示最新的一条回显、sessionID、命名
 
-- 每个批量执行任务会单独新建一个**与项目名同名的文件夹**作为工作区；
-- 历史执行过的批量任务可在右侧侧边栏查阅和重新打开。
+；执行结果凭据的截图；错误报错（如有）；BUG单描述（如有）；执行时长；工具调用分别次数情况，Trace情况跳转
 
----
+4、执行结果分析
 
-## 4. 详细页面设计
+需要先给出执行情况的可视化分析，包括通过和失败情况，占比，执行次数、用例个数、修复次数、平均时长、时长分布、每个用例都可以点进去看用例详情页、条状完整执行过程缩略图，
 
-### 4.1 页面一：新建执行任务
+简单的结果样例如下，你还需要自己丰富
 
-#### 4.1.1 用例来源
+除此之外，失败的用例还需要进行任务归因，需要手选一下，失败原因和备注（可选），原因有待测系统问题（有效BUG）、工具误报、工具执行失败、用例质量四类，归因完成后可以单独导出失败的执行用例和任务json，
 
-| 来源 | 状态 | 说明 |
-| ---- | ---- | ---- |
-| 模板下载 | ✅ | 提供标准用例模板（含四字段示例）下载 |
-| 上传用例文件 | ✅ | 支持 xlsx/csv/md/json 等格式上传 |
-| 导入任务 JSON | ✅ | 直接导入已编排好的任务 JSON，跳过部分编排步骤 |
-| 路径指定 | ✅ | 指定本地用例文件路径 |
-| 从 TAAS 拉取 | ⏸ 置灰 | 后续支持，提示「即将上线」 |
-
-- 导入后用例转为「用例卡片」展示；
-- 若导入的是任务 JSON，则直接跳转到「执行任务设置」页并预填。
-
-#### 4.1.2 项目命名
-
-- 必须命名一个项目名；
-- 默认命名规则：`第一个用例名 + 等用例执行 + 时间`，例如 `测试需求分析页面正确访问-等用例执行-20250720-1630`；
-- 支持手动编辑；
-- 项目名将作为工作区文件夹名，需做合法性校验（禁用非法字符）。
-
-#### 4.1.3 用例卡片展示
-
-上传后以网格形式展示用例卡片，每张卡片包含：
-
-- 用例名
-- 预置条件
-- 测试步骤
-- 预期结果
-- 质量评级角标（自检后出现，红/黄/绿）
-
-#### 4.1.4 用例自检与质量评级
-
-导入完成后自动触发「用例自检」，调用外部质检包，检查项：
-
-| 检查项 | 规则 | 出错计数 |
-| ------ | ---- | -------- |
-| 字段完整性 | 必须包含四个字段：用例名、预置条件、测试步骤、预期结果 | 缺 1 项 +1 |
-| 步骤数量 | 不低于 3 步，不超过 150 步 | 越界 +1 |
-| 验证性词汇 | 步骤/预期中应包含"应该"、"必须"等验证性词汇 | 缺失 +1 |
-| （预留）LLM 评估 | 后续接入 LLM 评估语义完整性等 | — |
-
-按出错个数给出质量评级：
-
-| 出错个数 | 评级 | 角标颜色 |
-| -------- | ---- | -------- |
-| 0 | 优 | 🟢 绿色 |
-| 1–2 | 良 | 🟡 黄色 |
-| ≥3 | 差 | 🔴 红色 |
-
-#### 4.1.5 依赖关系编辑
-
-- 支持编辑用例卡片之间的依赖关系；
-- 有依赖关系的用例可像**纸牌一样叠放**展示；
-- 鼠标拖动用例卡片时有交互动效（跟随、阴影、占位提示）；
-- 叠放过程需有动效（缓动落下、层叠层级动画）；
-- 已叠放的用例堆可点开，分别编辑每个用例，展开/收起需有动效。
-
-#### 4.1.6 执行参数设置
-
-需设置三个数字参数：
-
-| 参数 | 说明 | 默认值建议 |
-| ---- | ---- | ---------- |
-| 重复执行次数 | 每条用例重复执行的次数 | 1 |
-| 失败重试次数 | 失败后重试的次数 | 1 |
-| 单批执行个数 | 每个批次内最多并行的任务数 | 由系统按并行度建议 |
-
-#### 4.1.7 进入下一步
-
-- 点击「确认用例设置」后，卡片流切换到下一张「执行任务设置」；
-- 切换需有滑动/翻转动效。
-
----
-
-### 4.2 页面二：执行任务设置
-
-#### 4.2.1 导入与预填
-
-- 支持导入 JSON；
-- 若上一步已导入任务 JSON 或在本页导入，直接展示编排结果。
-
-#### 4.2.2 任务类型
-
-| 类型 | 说明 |
-| ---- | ---- |
-| 并行任务 | 同一批次内可同时执行，展示在同一行 |
-| 批次任务 | 批次内用例全部执行完才能执行下一批次，批次之间有分割线 |
-
-- 需要在界面上提供**说明文案/图示**解释并行与批次的区别。
-
-#### 4.2.3 命令模板
-
-- 默认执行命令格式：
-
-  ```
-  @test-web-execution + 默认用例执行命令 + 用例内容
-  ```
-
-- 允许修改命名模板，重新生成所有任务上的命令；
-- 允许**单个编辑**某条任务的命令内容。
-
-#### 4.2.4 自动生成任务
-
-- 因为上一步已设置用例、依赖、参数，本页可**自动生成一版任务编排**，用户在此基础上调整。
-
-#### 4.2.5 任务展示规则
-
-| 维度 | 展示规则 |
-| ---- | -------- |
-| 串行任务 | 每条独占一行 |
-| 重复执行 / 失败重试 / 依赖用例 | 以叠放形式展示，可展开 |
-| 叠放展开 | 子任务有缩进 + 虚线连接 |
-| 并行任务 | 同一行展示 |
-| 不同批次 | 之间有分割线 |
-
-#### 4.2.6 拖拽编排
-
-- 允许重新拖放任务顺序；
-- 允许拖放到不同分割线（不同批次）；
-- 拖放到任务**右侧** → 设置为并行；
-- 拖放到**中间/左侧** → 设置为分组叠放（依赖）；
-- 拖拽过程需有动效（占位、吸附、虚影）。
-
-#### 4.2.7 完成设置
-
-- 点击「完成设置」进入执行卡片。
-
----
-
-### 4.3 页面三：任务执行过程（N 个批次）
-
-#### 4.3.1 缩略卡片扩展
-
-- 有多少个批次就会多出几个右侧执行缩略卡片；
-- 从 1 张变为多张需有**展开动效**（依次飞出/展开）。
-
-#### 4.3.2 任务展示
-
-- 任务样式与上一页一致；
-- 每个批次只展示该批次内的任务。
-
-#### 4.3.3 任务状态与颜色
-
-| 状态 | 颜色 | 动效 |
-| ---- | ---- | ---- |
-| 成功 | 🟢 绿色 | — |
-| 失败 | 🟠 橙色 | — |
-| 未执行 | ⚪ 灰色 | — |
-| 正在重试 | 🟡 黄色 | — |
-| 执行中 | 🔵 蓝色 | 脉冲动效 + 假进度条 |
-
-#### 4.3.4 叠放任务执行
-
-- 执行到叠放任务时，会**展开分别展示进度**；
-- 执行中和执行完的任务可点击跳转到「单个用例详情结果页」。
-
-#### 4.3.5 单个用例执行结果页
-
-包含以下卡片：
-
-| 卡片 | 内容 |
-| ---- | ---- |
-| Session 详情 | 点击可跳转到相应会话；展示最新一条回显、sessionID、命名 |
-| 执行结果凭据 | 截图 |
-| 错误报错 | 如有 |
-| BUG 单描述 | 如有 |
-| 执行时长 | 单条任务耗时 |
-| 工具调用情况 | 各工具调用次数 |
-| Trace 情况 | 可跳转 |
-
----
-
-### 4.4 页面四：执行结果分析
-
-#### 4.4.1 可视化分析
-
-需先给出执行情况的可视化分析，包括：
-
-- 通过 / 失败情况及占比（饼图或环形图）
-- 执行次数
-- 用例个数
-- 修复次数
-- 平均时长
-- 时长分布（柱状图/直方图）
-- 每个用例可点进去看用例详情页
-- 条状完整执行过程缩略图（横向时间轴，展示各批次/任务的状态色块）
-
-#### 4.4.2 结果样例参考
-
-```
 --- 执行结果 ---
 所有 9 个测试用例已全部执行完成，结果汇总如下：
 
@@ -309,246 +71,938 @@ OpenLab-Robot 当前已有「新建会话」入口，用户可基于 Claude-Haha
 | ------------------ | ------------------------ | -------- |
 | RequireAnalysis-01 | 测试需求分析页面正确访问 | **通过** |
 | RequireAnalysis-02 | 面包屑导航路径正确       | **通过** |
-| ...                | ...                      | ...      |
+| RequireAnalysis-03 | 测试流程导航显示正确     | **通过** |
+| RequireAnalysis-04 | 需求来源字段显示本地选项 | **通过** |
+| RequireAnalysis-05 | 需求来源切换本地/远程    | **通过** |
+| RequireAnalysis-06 | 点击新增按钮打开新增界面 | **通过** |
+| RequireAnalysis-07 | 新增成功                 | **通过** |
+| RequireAnalysis-08 | 新增取消                 | **通过** |
 | RequireAnalysis-09 | 新增界面必填项校验       | **通过** |
 
 **RequireAnalysis-07** 还成功新增了一条测试数据 "TC-Auto-Test-Title-0720"，列表总条数从 52 增加到 53。
---- 结束 ---
+  --- 结束 ---
+    [DEBUG] LLM judge output: '全部完成'
+  [OK] 全部完成 — LLM判断: 全部完成
+  Done (8m02s) 结束时间: 16:31:36
 
 ============================================================
+
   执行报告
 ============================================================
+
   总计: 2 个任务 | 完成: 1 | 部分完成: 0 | 中断: 1 | 跳过: 0
   总耗时: 29m52s
   平均耗时: 9m44s
-------------------------------------------------------------
-  序号  任务                                  状态        耗时    session_id        开始     结束
-------------------------------------------------------------
-   1  project_1 - 打开浏览器 (1/2)            中断      11m32s  4e4c95a7...b0e6  16:01:46 16:13:22
-   2  project_1 - 打开浏览器 (1/2) [已重试-中断] 中断   9m40s   cc21e23c...58eb  16:13:28 16:23:24
-   3  project_1 - 打开浏览器 (2/2)            全部完成   8m02s   2eab7311...272c  16:23:27 16:31:36
+\------------------------------------------------------------
+    序号  任务                                         状态             耗时   session_id     开始     结束
+\------------------------------------------------------------
+     1  project_1 - 打开浏览器 (1/2)                    中断         11m32s 4e4c95a7...b0e6 16:01:46 16:13:22
+     2  project_1 - 打开浏览器 (1/2) [已重试-中断]           中断          9m40s cc21e23c...58eb 16:13:28 16:23:24
+
+     3  project_1 - 打开浏览器 (2/2)                    全部完成        8m02s 2eab7311...272c 16:23:27 16:31:36
+
 ============================================================
-```
 
-> 前端需在上述样例基础上自行丰富图表与交互。
+5、结果总结和上传
 
-#### 4.4.3 失败归因
+确认执行结果后可以选择执行重新执行失败任务还是上传结果
 
-失败的用例需进行任务归因（需用户**手动选择**）：
+确认结果上传有上传BUG问题单和上传执行结果两个部分，可以分别上传，也可以都传都不传，传需要鉴权登录，传的过程可以产生sessionID
 
-| 字段 | 说明 |
-| ---- | ---- |
-| 失败原因 | 单选，四类之一（见下表） |
-| 备注 | 可选，文本 |
+最后是结束任务或重新执行，重新执行就是新增一个从卡片2开始的东西，自动导入内容
 
-| 失败原因分类 | 说明 |
-| ------------ | ---- |
-| 待测系统问题（有效 BUG） | 被测系统确实存在缺陷 |
-| 工具误报 | 工具判定有误，实际用例通过 |
-| 工具执行失败 | 工具/脚本执行异常导致未完成 |
-| 用例质量 | 用例本身设计有问题 |
+## 原型脚本
 
-#### 4.4.4 导出
+以下是我当前使用的批量执行Demo验证使用的脚本，供参考：
 
-- 归因完成后可单独导出：
-  - 失败的执行用例
-  - 任务 JSON
+"""
 
----
+Serially execute claude-haha commands based on JSON config.
 
-### 4.5 页面五：结果总结与上传
 
-#### 4.5.1 确认执行结果
 
-- 确认执行结果后，用户可选择：
-  - 重新执行失败任务
-  - 上传结果
+JSON format (array of tasks):
 
-#### 4.5.2 上传内容
-
-| 上传项 | 说明 | 是否必传 |
-| ------ | ---- | -------- |
-| 上传 BUG 问题单 | 归因后产生的缺陷单 | 可选 |
-| 上传执行结果 | 执行报告与凭据 | 可选 |
-
-- 两者可分别上传，也可都传或都不传；
-- 上传需要**鉴权登录**；
-- 上传过程会产生 sessionID，可用于追踪。
-
-#### 4.5.3 结束任务 / 重新执行
-
-| 操作 | 说明 |
-| ---- | ---- |
-| 结束任务 | 完成本次批量执行任务，归档到历史 |
-| 重新执行 | 新增一个从「卡片 2（执行任务设置）」开始的任务，自动导入内容 |
-
----
-
-## 5. 交互与动效规范
-
-> 用户明确要求"页签内要尽量丰富动效"，以下为动效规范要点：
-
-| 场景 | 动效要求 |
-| ---- | -------- |
-| 页签进入 | 渐入 + 轻微上移 |
-| 页签切换 | 滑动/淡入淡出过渡 |
-| 页签悬浮 | 缩放/阴影/高亮反馈 |
-| 置灰页签 | Tooltip 提示「即将上线」，不可点击 |
-| 卡片流切换 | 横向滑动 + 缓动 |
-| 用例卡片拖动 | 跟随光标 + 阴影 + 占位虚线 |
-| 用例叠放 | 缓动落下 + 层叠层级动画 |
-| 叠放展开/收起 | 高度展开 + 子项依次淡入 |
-| 批次缩略卡片扩展 | 依次飞出/展开 |
-| 执行中任务 | 蓝色脉冲 + 假进度条推进 |
-| 状态变化 | 颜色过渡（灰 → 蓝 → 绿/橙/黄） |
-| 拖拽排序 | 占位 + 吸附 + 虚影 |
-| 跳转详情 | 过渡动画，可返回 |
-
-> 建议使用 Framer Motion 实现以上动效，保持缓动曲线与时长一致（建议 200–350ms，缓动 `ease-out`）。
-
----
-
-## 6. 数据结构
-
-### 6.1 任务 JSON 格式（与原型脚本兼容）
-
-```json
 [
-  {
-    "label": "任务名称（可选，用于显示）",
-    "cwd": "D:\\path\\to\\dir1",
-    "prompt": "task description 1",
-    "repeats": 1,
-    "extra_allowed_tools": []
-  },
-  {
-    "label": "另一个任务",
-    "cwd": "D:\\path\\to\\dir1",
-    "prompt": "task description 2"
-  }
+
+ {
+
+  "label": "任务名称（可选，用于显示）",
+
+  "cwd": "D:\\path\\to\\dir1",
+
+  "prompt": "task description 1"
+
+ },
+
+ {
+
+  "label": "另一个任务",
+
+  "cwd": "D:\\path\\to\\dir1",
+
+  "prompt": "task description 2"
+
+ }
+
 ]
-```
 
-- `cwd` 可以是绝对路径，也可以是相对于 config.json 所在目录的相对路径；
-- `repeats` 可选，覆盖全局 repeat 设置；
-- `extra_allowed_tools` 可选，追加到默认工具列表。
+注: cwd 可以是绝对路径，也可以是相对于 config.json 所在目录的相对路径。
 
-### 6.2 扩展字段（前端编排需补充）
 
-为支持并行/批次/依赖，前端在导入导出时需扩展以下字段（与脚本兼容，脚本忽略未知字段）：
 
-```json
-{
-  "batches": [
-    {
-      "batch_id": "batch-1",
-      "tasks": [
-        {
-          "label": "...",
-          "cwd": "...",
-          "prompt": "...",
-          "repeats": 1,
-          "retry": 1,
-          "depends_on": ["task-id-xxx"],
-          "parallel_with": null
-        }
-      ]
-    }
+Usage:
+
+  python run_claude_tasks.py <config.json>
+
+"""
+
+
+
+import json
+
+import subprocess
+
+import sys
+
+import os
+
+import time
+
+import argparse
+
+import threading
+
+import datetime
+
+
+
+\# Retry delay between steps
+
+RETRY_DELAY = 3
+
+
+
+
+
+def _find_claude_haha():
+
+  """查找 claude/claude-haha 命令路径。优先本地安装，再查 PATH。"""
+
+  import shutil
+
+  \# 先检查常见本地安装路径（优先于 PATH）
+
+  candidates = [
+
+​    os.path.expanduser("~/.local/bin/claude-haha"),
+
+​    os.path.expanduser("~/bin/claude-haha"),
+
   ]
-}
-```
 
----
+  for c in candidates:
 
-## 7. 质量检查规则（外部质检包）
+​    if os.path.isfile(c):
 
-| 编号 | 检查项 | 规则 | 失败计数 |
-| ---- | ------ | ---- | -------- |
-| Q1 | 字段完整性 | 必须包含：用例名、预置条件、测试步骤、预期结果 | 每缺 1 项 +1 |
-| Q2 | 步骤数量 | 3 ≤ 步骤数 ≤ 150 | 越界 +1 |
-| Q3 | 验证性词汇 | 步骤/预期中包含"应该"、"必须"等 | 缺失 +1 |
-| Q4 | （预留）LLM 评估 | 语义完整性、可执行性等 | 后续定义 |
+​      return c
 
-评级映射：
+  \# 再查 PATH
 
-| 出错个数 | 评级 | 角标 |
-| -------- | ---- | ---- |
-| 0 | 优 | 🟢 |
-| 1–2 | 良 | 🟡 |
-| ≥3 | 差 | 🔴 |
+  p = shutil.which("claude-haha")
 
----
+  if p:
 
-## 8. 执行引擎说明（参考原型脚本）
+​    return p
 
-本期前端编排与可视化基于现有 `run_claude_tasks.py` 脚本能力包装，关键能力对照：
+  print("[警告] 无法找到 claude-haha，将使用默认路径")
 
-| 脚本能力 | 前端对应 |
-| -------- | -------- |
-| 串行执行 tasks | 批次串行 |
-| `repeat` / `repeats` 展开 | 重复执行次数 |
-| `max_attempts = 2`（部分完成/中断重试 1 次） | 失败重试次数 |
-| `judge_task_result` LLM 判定（全部完成/部分完成/中断） | 任务状态映射 |
-| `session_id` 提取 | Session 详情卡片跳转 |
-| 执行报告（总计/完成/部分/中断/跳过、耗时、session_id） | 结果分析可视化 |
-| `--at` 定时执行 | 预留：定时执行（后续） |
+  return "claude-haha"
 
-### 8.1 命令构建
 
-- 默认工具列表 `DEFAULT_TOOLS` 包含 `test-web-execution` 及 chrome_devtools 系列 MCP 工具；
-- 默认命令：`"{CLAUDE_HAHA}" -p "{prompt}" --allowedTools "{tools}" --output-format json`；
-- 重试命令：`"{CLAUDE_HAHA}" -p "继续" --resume "{session_id}" --allowedTools "{tools}" --output-format json`。
 
-### 8.2 状态映射
+CLAUDE_HAHA = _find_claude_haha()
 
-| 脚本 Verdict | 前端状态 | 颜色 |
-| ------------ | -------- | ---- |
-| 全部完成 | 成功 | 🟢 绿 |
-| 部分完成 | 失败（部分） | 🟠 橙 |
-| 中断 | 失败（中断） | 🟠 橙 |
-| 重试中 | 正在重试 | 🟡 黄 |
-| 执行中 | 执行中 | 🔵 蓝（脉冲） |
-| 未执行 | 未执行 | ⚪ 灰 |
 
----
 
-## 9. 非功能性需求
+\# Default allowed tools list
 
-| 维度 | 要求 |
-| ---- | ---- |
-| 响应式 | 适配桌面端为主，移动端可降级展示 |
-| 性能 | 用例卡片列表支持虚拟滚动，单任务 ≥ 200 条不卡顿 |
-| 可访问性 | 键盘可操作，关键操作有 ARIA 标签 |
-| 国际化 | 预留 i18n，首期中文 |
-| 鉴权 | 上传 BUG 单 / 执行结果需登录鉴权 |
-| 工作区隔离 | 每个批量任务独立文件夹，互不干扰 |
-| 历史可追溯 | 历史任务可在右侧侧边栏查阅、重新打开 |
+DEFAULT_TOOLS = "Skill,Read,Write,Edit,Grep,Glob,Bash (python *),TaskCreate,TaskGet,TaskList,TaskUpdate,TaskOutput,TaskStop,test-web-execution,mcp__plugin_chrome_devtools__list_pages,mcp__plugin_chrome_devtools__navigate_page,mcp__plugin_chrome_devtools__new_page,mcp__plugin_chrome_devtools__select_page,mcp__plugin_chrome_devtools__click,mcp__plugin_chrome_devtools__hover,mcp__plugin_chrome_devtools__fill,mcp__plugin_chrome_devtools__type_text,mcp__plugin_chrome_devtools__upload_file,mcp__plugin_chrome_devtools__take_screenshot,mcp__plugin_chrome_devtools__take_snapshot,mcp__plugin_chrome_devtools__handle_dialog,mcp__plugin_chrome_devtools__list_console_messages,mcp__plugin_chrome_devtools__list_network_requests"
 
----
 
-## 10. 里程碑与优先级
 
-| 里程碑 | 内容 | 优先级 |
-| ------ | ---- | ------ |
-| M1 | 入口 + 页签 + 页面一（用例导入、自检、依赖、参数） | P0 |
-| M2 | 页面二（任务编排、命令模板、拖拽） | P0 |
-| M3 | 页面三（执行过程可视化、状态动效、详情页） | P0 |
-| M4 | 页面四（结果分析、失败归因、导出） | P0 |
-| M5 | 页面五（上传、重新执行） | P0 |
-| M6 | 置灰页签（测试设计 / Agent 评测 / TAAS 拉取）占位 | P1 |
-| M7 | LLM 用例质量评估接入 | P1 |
-| M8 | 定时执行（`--at`） | P2 |
 
----
 
-## 11. 开放问题
+def build_allowed_tools(task_extra_tools=None):
 
-1. 上传 BUG 单 / 执行结果的**目标平台**是哪个？（需确认对接的缺陷管理系统）
-2. 「从 TAAS 拉取」的 TAAS 接口规范何时提供？
-3. LLM 用例质量评估的模型与评分维度如何定义？
-4. 工作区文件夹是否需要支持云端同步，还是仅本地？
-5. 历史任务的保留策略（数量上限 / 自动清理）如何定义？
+  """构建 --allowedTools 参数值，合并默认工具 + 额外工具。"""
 
----
+  tools = DEFAULT_TOOLS
 
-> **附**：原型脚本 `run_claude_tasks.py` 已提供串行执行、重试、LLM 判定、session_id 提取、执行报告等核心能力，本期前端在此基础上做可视化编排与结果展示，不改动脚本核心逻辑。
+  if task_extra_tools:
+
+​    extra = ",".join(task_extra_tools)
+
+​    tools = f"{tools},{extra}"
+
+  return tools
+
+
+
+def _get_plugin_json_path():
+
+  """获取 plugin.json 绝对路径（延迟初始化）。"""
+
+  return os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugin.json")
+
+
+
+\# Default command-line flags (output-format json for session_id extraction)
+
+DEFAULT_FLAGS = f'--allowedTools "{DEFAULT_TOOLS}" --output-format json'
+
+
+
+def build_command(prompt, allowed_tools_flags, is_resume=False, session_id=None):
+
+  """构建执行命令。"""
+
+  cmd = f'"{CLAUDE_HAHA}" -p "{prompt}" {allowed_tools_flags}'
+
+  if is_resume and session_id:
+
+​    cmd = f'"{CLAUDE_HAHA}" -p "继续" --resume "{session_id}" {allowed_tools_flags}'
+
+  return cmd
+
+
+
+
+
+\# Verdict categories
+
+VERDICT_FULL = "全部完成"
+
+VERDICT_PARTIAL = "部分完成"
+
+VERDICT_ABORTED = "中断"
+
+
+
+JUDGE_PROMPT = (
+
+  "你是一个测试自动化任务分析助手。请根据下面的控制台输出来判断本次任务的状态。\n"
+
+  "只允许返回以下三个词之一：全部完成、部分完成、中断。不要返回其他内容。\n\n"
+
+  "判断标准：\n"
+
+  "1. 全部完成：控制台显示已生成测试报告，且报告中所有步骤均为 PASS\n"
+
+  "2. 部分完成：控制台显示已生成测试报告，但报告中存在步骤为 PARTIAL 或 FAIL\n"
+
+  "3. 中断：控制台显示未生成测试报告（如执行中断、进程终止、报错退出等）\n\n"
+
+  "以下是控制台输出：\n---\n{output}\n---\n\n请只返回一个词：全部完成、部分完成 或 中断"
+
+)
+
+
+
+
+
+def call_claude_judge(output_text, judge_cwd, extra_tools=None):
+
+  """通过 claude-haha -p 调用来判断结果。"""
+
+  if isinstance(output_text, bytes):
+
+​    output_text = output_text.decode("utf-8", errors="replace")
+
+  prompt = JUDGE_PROMPT.format(output=output_text[:8000]).replace("\n", "\\n")
+
+  allowed = build_allowed_tools(extra_tools)
+
+  cmd = f'"{CLAUDE_HAHA}" -p "{prompt}" --allowedTools "{allowed}" --output-format json'
+
+  try:
+
+​    result = subprocess.run(cmd, cwd=judge_cwd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+
+​    judge_output = result.stdout.decode("utf-8", errors="replace")
+
+​    \# 只解析 result 字段显示
+
+​    try:
+
+​      json_out = json.loads(judge_output)
+
+​      debug_text = json_out.get("result", "")[:200]
+
+​    except json.JSONDecodeError:
+
+​      debug_text = judge_output[:200]
+
+​    print(f"   [DEBUG] LLM judge output: {repr(debug_text)}")
+
+​    if result.returncode == 0:
+
+​      if "全部完成" in judge_output:
+
+​        return VERDICT_FULL, "LLM判断: 全部完成"
+
+​      elif "部分完成" in judge_output:
+
+​        return VERDICT_PARTIAL, "LLM判断: 部分完成"
+
+​      elif "中断" in judge_output:
+
+​        return VERDICT_ABORTED, "LLM判断: 中断"
+
+  except subprocess.TimeoutExpired:
+
+​    print("   [警告] 判断超时")
+
+  except Exception as e:
+
+​    print(f"   [警告] 判断调用失败: {e}")
+
+  return None, None
+
+
+
+
+
+def parse_json_output(raw_output):
+
+  """解析 JSON 格式的输出，返回 (session_id, result_text, raw_json)"""
+
+  output_text = raw_output.decode("utf-8", errors="replace").strip()
+
+  session_id = None
+
+  result_text = ""
+
+  raw_json = None
+
+  try:
+
+​    raw_json = json.loads(output_text)
+
+​    \# 兼容 JSON 对象和 JSON 数组两种格式
+
+​    if isinstance(raw_json, dict):
+
+​      session_id = raw_json.get("session_id")
+
+​      result_text = raw_json.get("result", "")
+
+​    elif isinstance(raw_json, list):
+
+​      for item in raw_json:
+
+​        if isinstance(item, dict) and "result" in item:
+
+​          session_id = item.get("session_id", "")
+
+​          result_text = item.get("result", "")
+
+​          break
+
+  except json.JSONDecodeError:
+
+​    pass
+
+  return session_id, result_text, raw_json
+
+
+
+
+
+def judge_task_result(console_output, prompt, judge_cwd, extra_tools=None):
+
+  """
+
+  根据控制台输出判断任务完成状态。
+
+
+
+  返回元组 (verdict, details):
+
+   \- (VERDICT_FULL, "全部完成")
+
+   \- (VERDICT_PARTIAL, "部分完成")
+
+   \- (VERDICT_ABORTED, "中断")
+
+  """
+
+  output_text = console_output.decode("utf-8", errors="replace")
+
+
+
+  \# 空输出直接判断为中断
+
+  if not output_text or len(output_text.strip()) < 10:
+
+​    return VERDICT_ABORTED, "控制台输出为空"
+
+
+
+  \# 尝试从 JSON 输出提取 result 字段作为判断依据
+
+  _, result_text, raw_json = parse_json_output(console_output)
+
+  judge_text = result_text if result_text else output_text
+
+  return call_claude_judge(judge_text.encode("utf-8", errors="replace"), judge_cwd, extra_tools)
+
+
+
+
+
+def print_timer(start, stop_event):
+
+  """Background thread: print elapsed time every second."""
+
+  while not stop_event.is_set():
+
+​    elapsed = time.time() - start
+
+​    minutes = int(elapsed // 60)
+
+​    seconds = int(elapsed % 60)
+
+​    print(f"\r  Elapsed: {minutes:02d}:{seconds:02d}", end="", flush=True)
+
+​    stop_event.wait(1)
+
+
+
+
+
+def fmt_time(total):
+
+  """Format total seconds into human-readable string."""
+
+  if total < 60:
+
+​    return f"{total:.0f}s"
+
+  minutes = int(total // 60)
+
+  seconds = int(total % 60)
+
+  return f"{minutes}m{seconds:02d}s"
+
+
+
+
+
+def resolve_cwd(cwd, config_dir):
+
+  """解析 cwd: 如果是相对路径则相对于 config.json 所在目录。"""
+
+  if os.path.isabs(cwd):
+
+​    return cwd
+
+  return os.path.join(config_dir, cwd)
+
+
+
+
+
+def expand_tasks(tasks, repeat):
+
+  """根据 repeat 展开任务列表。每个任务支持单独设置 repeats 字段。"""
+
+  expanded = []
+
+  for task in tasks:
+
+​    task_repeat = task.get("repeats", repeat)
+
+​    for i in range(task_repeat):
+
+​      entry = dict(task)
+
+​      entry["_repeat_idx"] = i
+
+​      entry["_repeat_total"] = task_repeat
+
+​      entry["label"] = task.get("label", task["prompt"][:50])
+
+​      entry["_task_key"] = len(expanded)  # 展开后唯一标识，每个 repeat 独立
+
+​      expanded.append(entry)
+
+  return expanded
+
+
+
+
+
+def main():
+
+  parser = argparse.ArgumentParser(description="Serially execute claude-haha commands based on JSON config.")
+
+  parser.add_argument("config", help="JSON config file path")
+
+  parser.add_argument("-r", "--repeat", type=int, default=1,
+
+​            help="Repeat each task N times (default: 1). Can be overridden per-task with 'repeats' field.")
+
+  parser.add_argument("--at", type=str, default=None,
+
+​            help="Scheduled start time, format: HH:MM or YYYY-MM-DD HH:MM (e.g. 14:00, 2026-07-04 12:00). Will wait until that time to begin.")
+
+  args = parser.parse_args()
+
+
+
+  \# 等待到指定时间
+
+  if args.at:
+
+​    now = time.time()
+
+​    \# 解析日期+时间或仅时间
+
+​    if "T" in args.at:
+
+​      \# 2026-07-03T17:34
+
+​      target = time.mktime(time.strptime(args.at, "%Y-%m-%dT%H:%M"))
+
+​    elif " " in args.at:
+
+​      \# 2026-07-03 17:34
+
+​      target = time.mktime(time.strptime(args.at, "%Y-%m-%d %H:%M"))
+
+​    else:
+
+​      \# 仅 HH:MM，用今天的日期
+
+​      today = time.strftime("%Y-%m-%d")
+
+​      target = time.mktime(time.strptime(f"{today} {args.at}", "%Y-%m-%d %H:%M"))
+
+​      \# 如果目标时间已过，自动算明天
+
+​      if target <= now:
+
+​        next_day = datetime.date.today() + datetime.timedelta(days=1)
+
+​        target = time.mktime(time.strptime(f"{next_day} {args.at}", "%Y-%m-%d %H:%M"))
+
+
+
+​    wait_secs = target - now
+
+​    if wait_secs > 0:
+
+​      hours = int(wait_secs // 3600)
+
+​      minutes = int((wait_secs % 3600) // 60)
+
+​      print(f"定时模式: 等待到 {args.at} 开始执行（还需等待 {hours}h{minutes}m）")
+
+​      time.sleep(wait_secs)
+
+​    else:
+
+​      print(f"当前时间已过 {args.at}，立即开始执行")
+
+
+
+  config_path = args.config
+
+  repeat = args.repeat
+
+  config_dir = os.path.dirname(os.path.abspath(config_path))
+
+
+
+  with open(config_path, "r", encoding="utf-8") as f:
+
+​    data = json.load(f)
+
+
+
+  \# 兼容旧格式: 如果 load 出来是 dict ({"dir": "prompt"})，转为新数组格式
+
+  if isinstance(data, dict):
+
+​    tasks = [{"cwd": k, "prompt": v} for k, v in data.items()]
+
+  elif isinstance(data, list):
+
+​    tasks = data
+
+  else:
+
+​    print(f"Error: invalid config format, expected dict or array")
+
+​    sys.exit(1)
+
+
+
+  \# 展开 repeat
+
+  tasks = expand_tasks(tasks, repeat)
+
+
+
+  total = len(tasks)
+
+  print(f"Loaded {total} task(s) from {config_path} (repeat={repeat}x)")
+
+  print("=" * 60)
+
+
+
+  overall_start = time.time()
+
+  task_durations = []
+
+  task_stats = []
+
+  verdict_icons = {
+
+​    VERDICT_FULL: "[OK]",
+
+​    VERDICT_PARTIAL: "[PARTIAL]",
+
+​    VERDICT_ABORTED: "[ABORTED]",
+
+  }
+
+
+
+  for idx, task in enumerate(tasks, 1):
+
+​    work_dir = resolve_cwd(task.get("cwd", "."), config_dir)
+
+​    prompt = task["prompt"]
+
+​    label = task.get("label", prompt[:50])
+
+
+
+​    repeat_info = task.get("_repeat_idx", 0)
+
+​    total_repeats = task.get("_repeat_total", 1)
+
+​    task_key = task.get("_task_key", idx)  # 唯一任务标识
+
+​    if total_repeats > 1:
+
+​      label = f"{label} ({repeat_info+1}/{total_repeats})"
+
+​    print(f"\n[{idx}/{total}] {label}")
+
+​    print(f"  Dir: {work_dir}")
+
+​    print(f"  Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+
+​    print(f"  开始时间: {time.strftime('%H:%M:%S')}")
+
+
+
+​    if not os.path.isdir(work_dir):
+
+​      print(f"  SKIP: directory does not exist: {work_dir}")
+
+​      task_stats.append({"label": label, "work_dir": work_dir, "verdict": "SKIP", "details": "目录不存在", "duration": 0, "_task_key": task_key})
+
+​      continue
+
+
+
+​    \# 尝试次数：初始 + 部分完成重试1次
+
+​    max_attempts = 2
+
+​    session_id = None
+
+​    verdict = None
+
+​    details = ""
+
+​    was_retry = False    # 是否因为部分完成/中断而重试过
+
+​    extra_tools = task.get("extra_allowed_tools", [])
+
+
+
+​    for attempt in range(max_attempts):
+
+​      if attempt > 0:
+
+​        time.sleep(RETRY_DELAY)  # 重试前等待
+
+​        print(f"\n{'=' * 60}")
+
+​        print(f"  [重试 #{attempt}]")
+
+​        if was_retry:
+
+​          print(f"  上一次判定为部分完成，正在重试...")
+
+​        else:
+
+​          print(f"  上一次判定为中断，正在重新执行...")
+
+​        print(f"{'=' * 60}")
+
+
+
+​      task_overall_start = time.time()
+
+
+
+​      allowed = build_allowed_tools(extra_tools)
+
+​      cmd = f'"{CLAUDE_HAHA}" -p "{prompt}" --allowedTools "{allowed}" --output-format json'
+
+
+
+​      print(f"  Command: {cmd}")
+
+
+
+​      \# Start timer thread
+
+​      task_start = time.time()
+
+​      stop_timer = threading.Event()
+
+​      timer_thread = threading.Thread(target=print_timer, args=(task_start, stop_timer), daemon=True)
+
+​      timer_thread.start()
+
+
+
+​      \# Run command and capture output
+
+​      raw_output = subprocess.run(cmd, cwd=work_dir, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+
+
+​      \# Stop timer
+
+​      stop_timer.set()
+
+​      task_elapsed = time.time() - task_start
+
+
+
+​      \# Clear timer line
+
+​      print("\r" + " " * 40 + "\r", end="", flush=True)
+
+
+
+​      if raw_output.returncode != 0:
+
+​        print(f"  FAILED: exit code {raw_output.returncode}")
+
+
+
+​      \# Parse JSON output
+
+​      out_session_id, result_text, raw_json = parse_json_output(raw_output.stdout)
+
+​      if out_session_id:
+
+​        session_id = out_session_id
+
+​        print(f"  session_id: {session_id}")
+
+
+
+​      \# 打印 result 内容
+
+​      if result_text:
+
+​        print(f"  --- 执行结果 ---")
+
+​        print(result_text)
+
+​        print(f"  --- 结束 ---")
+
+
+
+​      time.sleep(RETRY_DELAY)  # 执行用例后等待
+
+
+
+​      \# Judge verdict
+
+​      verdict, details = judge_task_result(raw_output.stdout, prompt, work_dir, extra_tools)
+
+​      if verdict is None:
+
+​        verdict = VERDICT_ABORTED
+
+​        details = "判断失败（默认视为中断）"
+
+
+
+​      icon = verdict_icons.get(verdict, "?")
+
+​      print(f"  {icon} {verdict} — {details}")
+
+
+
+​      \# 记录本次 attempt 统计
+
+​      task_end = time.time()
+
+​      print(f"  Done ({fmt_time(task_elapsed)}) 结束时间: {time.strftime('%H:%M:%S')}")
+
+​      task_durations.append(task_elapsed)
+
+​      attempt_start = time.strftime('%H:%M:%S', time.localtime(task_overall_start))
+
+​      attempt_end = time.strftime('%H:%M:%S')
+
+
+
+​      \# 判断是否需要重试
+
+​      if verdict in (VERDICT_PARTIAL, VERDICT_ABORTED) and attempt == 0:
+
+​        \# 首次失败，记录并准备重试
+
+​        attempt_label = label
+
+​        task_stats.append({"label": attempt_label, "work_dir": work_dir, "verdict": verdict, "details": details, "duration": task_elapsed, "session_id": session_id, "start_time": attempt_start, "end_time": attempt_end, "_task_key": task_key})
+
+​        was_retry = True
+
+​        mark = "部分完成" if verdict == VERDICT_PARTIAL else "中断"
+
+​        print(f"  {mark}，将在下一轮重试...")
+
+​        time.sleep(RETRY_DELAY)  # 判断后等待
+
+​        continue
+
+​      else:
+
+​        \# 全部完成，或重试后仍部分/中断 -> 结束
+
+​        if was_retry and verdict in (VERDICT_PARTIAL, VERDICT_ABORTED):
+
+​          print(f"  [重试后] 仍为{verdict}")
+
+
+
+​        \# 最终 label 标记
+
+​        mark_label = label
+
+​        if was_retry and verdict in (VERDICT_PARTIAL, VERDICT_ABORTED):
+
+​          suffix = {"部分完成": "部分完成", "中断": "中断"}.get(verdict, verdict)
+
+​          mark_label = f"{label} [已重试-{suffix}]"
+
+​        elif was_retry:
+
+​          mark_label = f"{label} [已重试-通过]"
+
+
+
+​        attempt_label = mark_label
+
+​        task_stats.append({"label": attempt_label, "work_dir": work_dir, "verdict": verdict, "details": details, "duration": task_elapsed, "session_id": session_id, "start_time": attempt_start, "end_time": attempt_end, "_task_key": task_key})
+
+​        break
+
+
+
+​    time.sleep(RETRY_DELAY)  # 下一轮任务前等待
+
+
+
+  \# Print final execution report
+
+  total_elapsed = time.time() - overall_start
+
+  print("\n" + "=" * 60)
+
+  print("  执行报告")
+
+  print("=" * 60)
+
+
+
+  \# 只统计最终 verdict（用最后一次 attempt 的结果）
+
+  verdict_counts = {VERDICT_FULL: 0, VERDICT_PARTIAL: 0, VERDICT_ABORTED: 0, "SKIP": 0}
+
+  task_keys = {}  # task_key -> verdict，后面的覆盖前面的
+
+  for s in task_stats:
+
+​    tk = s.get("_task_key")
+
+​    if tk is not None:
+
+​      task_keys[tk] = s["verdict"]
+
+  for v in task_keys.values():
+
+​    verdict_counts[v] = verdict_counts.get(v, 0) + 1
+
+
+
+  print(f"  总计: {total} 个任务 | 完成: {verdict_counts[VERDICT_FULL]} | 部分完成: {verdict_counts[VERDICT_PARTIAL]} | 中断: {verdict_counts[VERDICT_ABORTED]} | 跳过: {verdict_counts['SKIP']}")
+
+  print(f"  总耗时: {fmt_time(total_elapsed)}")
+
+  if task_durations:
+
+​    print(f"  平均耗时: {fmt_time(sum(task_durations) / len(task_durations))}")
+
+  print("-" * 60)
+
+  print(f"  {'序号':>4}  {'任务':<42} {'状态':<8} {'耗时':>8} {'session_id':>12} {'开始':>6} {'结束':>6}")
+
+  print("-" * 60)
+
+  for i, s in enumerate(task_stats, 1):
+
+​    icon = verdict_icons.get(s["verdict"], "?")
+
+​    sid = s.get("session_id", "")
+
+​    if sid:
+
+​      sid = sid[:8] + "..." + sid[-4:]
+
+​    else:
+
+​      sid = "-"
+
+​    start_t = s.get("start_time", "")
+
+​    end_t = s.get("end_time", "")
+
+​    label_display = s.get("label", "")[:42]
+
+​    print(f"  {i:4d}  {label_display:<42} {s['verdict']:<8} {fmt_time(s['duration']):>8} {sid:>12} {start_t:>6} {end_t:>6}")
+
+  print("=" * 60)
+
+
+
+
+
+if __name__ == "__main__":
+
+  main()
